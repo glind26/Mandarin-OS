@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Mandarin Galaxy 🌌</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        body { margin: 0; overflow: hidden; background: #050510; color: white; font-family: 'Segoe UI', sans-serif; user-select: none; }
+        
+        /* UI OVERLAY */
+        #controls {
+            position: absolute; top: 20px; left: 20px;
+            background: rgba(20, 20, 30, 0.9);
+            padding: 20px; border-radius: 12px;
+            border: 1px solid #444;
+            backdrop-filter: blur(5px);
+            z-index: 100;
+            width: 240px;
+            transition: transform 0.3s ease-in-out;
+        }
+        #controls.hidden { transform: translateX(-100%); opacity: 0; pointer-events: none; } 
+        
+        /* TOGGLE BUTTON */
+        #toggle-controls-btn {
+            position: absolute; top: 20px; left: 20px;
+            background: rgba(0, 210, 255, 0.7); color: #050510;
+            border: none; border-radius: 0 8px 8px 0;
+            padding: 10px 8px; font-size: 16px; cursor: pointer;
+            z-index: 101;
+            transition: transform 0.3s ease-in-out, background 0.2s;
+        }
+        #toggle-controls-btn:hover { background: #00d2ff; }
+        #controls.hidden ~ #toggle-controls-btn { transform: translateX(100%); }
+
+        h2 { margin: 0 0 15px 0; color: #00d2ff; font-size: 18px; text-transform: uppercase; letter-spacing: 2px; }
+        
+        /* TOGGLES */
+        .control-group { margin-bottom: 15px; }
+        label { display: flex; align-items: center; margin-bottom: 8px; cursor: pointer; font-size: 13px; color: #ddd; }
+        input[type="checkbox"] { accent-color: #00d2ff; margin-right: 10px; }
+        
+        /* COLOR PICKERS */
+        .color-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 13px; color: #aaa; }
+        input[type="color"] { border: none; width: 30px; height: 20px; cursor: pointer; background: none; padding: 0; border-radius: 4px; }
+
+        .section-title { font-size: 11px; font-weight: bold; color: #666; text-transform: uppercase; margin-bottom: 5px; margin-top: 15px; }
+
+        .legend { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #aaa; margin-top: 5px; }
+        .dot { width: 10px; height: 10px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.2); }
+
+        hr { border: 0; border-top: 1px solid #444; margin: 15px 0; }
+
+        /* TOOLTIP */
+        #tooltip {
+            position: absolute; 
+            background: rgba(255, 255, 255, 0.95); color: #333;
+            padding: 10px 15px; border-radius: 8px;
+            pointer-events: none; opacity: 0; transition: opacity 0.2s;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            font-size: 14px; z-index: 10; transform: translate(-50%, -120%);
+        }
+        .tt-zh { font-size: 24px; font-family: "KaiTi"; font-weight: bold; color: #2c3e50; }
+        .tt-py { color: #d35400; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<button id="toggle-controls-btn">☰</button>
+
+<div id="controls">
+    <button onclick="window.location.href='index.html'" style="width:100%; margin-bottom:15px; padding:10px; background:#333; color:white; border:1px solid #555; border-radius:6px; cursor:pointer;">🏠 Back to App</button>
+
+    <h2>Galaxy Map</h2>
+    
+    <div class="control-group">
+        <label><input type="checkbox" id="toggle-root" checked onchange="updateView()"> Show Center Gravity</label>
+        <label><input type="checkbox" id="toggle-folder" checked onchange="updateView()"> Show Folder Links</label>
+        <label><input type="checkbox" id="toggle-hanzi" checked onchange="updateView()"> Show Character Links</label>
+        <label><input type="checkbox" id="toggle-empty" onchange="updateView()"> Hide Empty Folders</label>
+    </div>
+
+    <hr>
+    
+    <div class="section-title">Colors - Objects</div>
+    <div class="color-row">
+        Center (Core): <input type="color" id="col-node-root" value="#ffffff" oninput="updateColors()">
+    </div>
+    <div class="color-row">
+        Folders (Suns): <input type="color" id="col-node-group" value="#ff0055" oninput="updateColors()">
+    </div>
+    <div class="color-row">
+        Words (Stars): <input type="color" id="col-node-word" value="#00d2ff" oninput="updateColors()">
+    </div>
+
+    <div class="section-title">Colors - Lines</div>
+    <div class="color-row">
+        Center Lines: <input type="color" id="col-link-root" value="#444444" oninput="updateColors()">
+    </div>
+    <div class="color-row">
+        Folder Lines: <input type="color" id="col-link-folder" value="#333333" oninput="updateColors()">
+    </div>
+    <div class="color-row">
+        Hanzi Lines: <input type="color" id="col-link-hanzi" value="#00d2ff" oninput="updateColors()">
+    </div>
+
+    <hr>
+    <div class="legend" style="opacity: 0.7; font-style: italic;">
+        Click Folders to Collapse/Expand<br>
+        Scroll to Zoom • Drag to Move
+    </div>
+</div>
+
+<div id="tooltip"></div>
+
+<script>
+    // --- 1. DATA PREP ---
+    let db = { words: [], groups: [] };
+    try {
+        const local = localStorage.getItem('mandarinFinalSuite_V12');
+        if (local) db = JSON.parse(local);
+    } catch(e) {}
+
+    const nodes = [];
+    const links = [];
+    
+    // Track collapsed groups
+    const collapsedGroups = new Set();
+
+    // A. Create ROOT Node
+    nodes.push({ id: 'root', name: '中文', type: 'root', val: 35, pinyin: 'Zhōngwén', meaning: 'Chinese Language' });
+
+    // B. Create Group Nodes
+    db.groups.forEach(g => {
+        const wordCount = db.words.filter(w => g.wordIds.includes(w.id)).length;
+        const gID = `g_${g.id}`;
+        nodes.push({ id: gID, name: g.name, type: 'group', val: 20, isEmpty: wordCount === 0 });
+        links.push({ source: gID, target: 'root', type: 'root' });
+    });
+
+    // C. Create Word Nodes
+    db.words.forEach(w => {
+        nodes.push({ id: w.id, name: w.char, pinyin: w.pinyin, meaning: w.meaning, type: 'word', val: 8 });
+        db.groups.forEach(g => {
+            if(g.wordIds.includes(w.id)) {
+                links.push({ source: w.id, target: `g_${g.id}`, type: 'folder' });
+            }
+        });
+    });
+
+    // D. Link Word to Word
+    for(let i = 0; i < db.words.length; i++) {
+        for(let j = i + 1; j < db.words.length; j++) {
+            const w1 = db.words[i];
+            const w2 = db.words[j];
+            const chars1 = w1.char.split('');
+            const chars2 = w2.char.split('');
+            const intersection = chars1.filter(c => chars2.includes(c));
+            if(intersection.length > 0) links.push({ source: w1.id, target: w2.id, type: 'hanzi' });
+        }
+    }
+
+    // --- 2. D3 SETUP ---
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+
+    const svg = d3.select("body").append("svg")
+        .attr("width", width)
+        .attr("height", height)
+        .call(d3.zoom().on("zoom", (event) => {
+            g.attr("transform", event.transform);
+        }))
+        .on("dblclick.zoom", null); // Disable double click zoom so we can click nodes
+
+    const g = svg.append("g");
+
+    const simulation = d3.forceSimulation(nodes)
+        .force("link", d3.forceLink(links).id(d => d.id).distance(d => {
+            if(d.type === 'root') return 80;
+            if(d.type === 'folder') return 40;
+            return 60;
+        }))
+        .force("charge", d3.forceManyBody().strength(-80)) 
+        .force("center", d3.forceCenter(width / 2, height / 2))
+        .force("collide", d3.forceCollide(d => d.val + 5));
+
+    // Draw Lines
+    const link = g.append("g")
+        .attr("stroke-opacity", 0.6)
+        .selectAll("line")
+        .data(links)
+        .join("line")
+        .attr("stroke-width", d => {
+            if(d.type === 'root') return 3;
+            if(d.type === 'folder') return 1;
+            return 2;
+        });
+
+    // Draw Nodes
+    const nodeGroup = g.append("g")
+        .selectAll("g")
+        .data(nodes)
+        .join("g")
+        .call(d3.drag()
+            .on("start", dragstarted)
+            .on("drag", dragged)
+            .on("end", dragended))
+        .on("click", handleNodeClick); // ADD CLICK LISTENER
+
+    // Draw Circles
+    const circle = nodeGroup.append("circle")
+        .attr("r", d => d.val)
+        .attr("stroke", "#fff")
+        .attr("stroke-width", 1.5)
+        .style("cursor", "pointer")
+        .on("mouseover", showTooltip)
+        .on("mouseout", hideTooltip);
+
+    // Draw Text Labels
+    const text = nodeGroup.append("text")
+        .text(d => d.name)
+        .attr("x", d => d.val + 5)
+        .attr("y", 5)
+        .attr("fill", "#ccc")
+        .style("font-size", d => d.type === 'root' ? "18px" : "12px")
+        .style("font-weight", d => d.type === 'root' ? "bold" : "normal")
+        .style("pointer-events", "none")
+        .style("text-shadow", "0 0 3px black");
+
+    simulation.on("tick", () => {
+        link
+            .attr("x1", d => d.source.x)
+            .attr("y1", d => d.source.y)
+            .attr("x2", d => d.target.x)
+            .attr("y2", d => d.target.y);
+
+        nodeGroup
+            .attr("transform", d => `translate(${d.x},${d.y})`);
+    });
+
+    // --- 3. LOGIC & CONTROLS ---
+    
+    // UI Elements
+    const controls = document.getElementById('controls');
+    const toggleBtn = document.getElementById('toggle-controls-btn');
+
+    toggleBtn.addEventListener('click', () => {
+        controls.classList.toggle('hidden');
+        toggleBtn.style.transform = controls.classList.contains('hidden') ? 'translateX(100%)' : 'translateX(0)';
+    });
+
+    // --- CLICK TO COLLAPSE ---
+    function handleNodeClick(event, d) {
+        // Stop the click from triggering dragging behaviors if distinct
+        if(d.type === 'group') {
+            if(collapsedGroups.has(d.id)) {
+                collapsedGroups.delete(d.id); // Expand
+            } else {
+                collapsedGroups.add(d.id); // Collapse
+            }
+            updateView();
+            updateColors(); // Refresh to show dim state
+        }
+    }
+
+    function updateView() {
+        const showRoot = document.getElementById('toggle-root').checked;
+        const showFolder = document.getElementById('toggle-folder').checked;
+        const showHanzi = document.getElementById('toggle-hanzi').checked;
+        const hideEmpty = document.getElementById('toggle-empty').checked;
+
+        link.style("display", d => {
+            if (d.type === 'root' && !showRoot) return "none";
+            if (d.type === 'folder') {
+                if (!showFolder) return "none";
+                // If the group connected to this link is collapsed, hide link
+                if (collapsedGroups.has(d.target.id)) return "none";
+            }
+            if (d.type === 'hanzi' && !showHanzi) return "none";
+            if (hideEmpty && (d.source.isEmpty || d.target.isEmpty)) return "none";
+            return "block";
+        });
+
+        const filterNode = (d) => {
+            if (d.type === 'group' && d.isEmpty && hideEmpty) return "none";
+            
+            // If it's a word...
+            if (d.type === 'word') {
+                // Find all groups this word belongs to
+                // We do this by checking the links that exist in memory
+                const parentGroups = links
+                    .filter(l => l.source.id === d.id && l.type === 'folder')
+                    .map(l => l.target.id);
+                
+                // If it belongs to groups, and ALL of them are collapsed, hide the word
+                if (parentGroups.length > 0) {
+                    const allCollapsed = parentGroups.every(gid => collapsedGroups.has(gid));
+                    if(allCollapsed) return "none";
+                }
+            }
+            return "block";
+        };
+
+        circle.style("display", filterNode);
+        text.style("display", filterNode);
+    }
+
+    function updateColors() {
+        const cRoot = document.getElementById('col-node-root').value;
+        const cGroup = document.getElementById('col-node-group').value;
+        const cWord = document.getElementById('col-node-word').value;
+        
+        circle.attr("fill", d => {
+            if(d.type === 'root') return cRoot;
+            if(d.type === 'group') {
+                // If collapsed, make it grey
+                return collapsedGroups.has(d.id) ? "#555555" : cGroup;
+            }
+            return cWord;
+        })
+        .attr("opacity", d => (d.type === 'group' && collapsedGroups.has(d.id)) ? 0.5 : 1);
+
+        const lRoot = document.getElementById('col-link-root').value;
+        const lFolder = document.getElementById('col-link-folder').value;
+        const lHanzi = document.getElementById('col-link-hanzi').value;
+
+        link.attr("stroke", d => {
+            if(d.type === 'root') return lRoot;
+            if(d.type === 'folder') return lFolder;
+            return lHanzi;
+        });
+    }
+
+    // Tooltip
+    const tt = document.getElementById('tooltip');
+    function showTooltip(event, d) {
+        tt.style.opacity = 1;
+        tt.style.left = event.pageX + "px";
+        tt.style.top = event.pageY + "px";
+        
+        let content = '';
+        if(d.type === 'root') content = `<div class="tt-zh">中文</div><div>The Core</div>`;
+        else if(d.type === 'group') {
+            const status = collapsedGroups.has(d.id) ? "(Collapsed)" : "(Expanded)";
+            content = `<div class="tt-zh">${d.name}</div><div>Folder ${status}</div>`;
+        }
+        else content = `<div class="tt-zh">${d.name}</div><div class="tt-py">${d.pinyin}</div><div>${d.meaning}</div>`;
+
+        tt.innerHTML = content;
+        
+        link.attr("stroke", l => (l.source === d || l.target === d) ? "#ffffff" : getLinkColor(l))
+            .attr("stroke-opacity", l => (l.source === d || l.target === d) ? 1 : 0.1);
+    }
+
+    function hideTooltip() {
+        tt.style.opacity = 0;
+        updateColors(); 
+        link.attr("stroke-opacity", 0.6);
+    }
+
+    function getLinkColor(d) {
+        if(d.type === 'root') return document.getElementById('col-link-root').value;
+        if(d.type === 'folder') return document.getElementById('col-link-folder').value;
+        return document.getElementById('col-link-hanzi').value;
+    }
+
+    // Drag
+    function dragstarted(event, d) {
+        if (!event.active) simulation.alphaTarget(0.3).restart();
+        d.fx = d.x;
+        d.fy = d.y;
+    }
+    function dragged(event, d) {
+        d.fx = event.x;
+        d.fy = event.y;
+    }
+    function dragended(event, d) {
+        if (!event.active) simulation.alphaTarget(0);
+        d.fx = null;
+        d.fy = null;
+    }
+
+    // Init
+    updateView();
+    updateColors();
+</script>
+</body>
+</html>

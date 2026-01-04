@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mandarin Smash 💥</title>
+    <style>
+        body { margin: 0; background: #46178f; font-family: 'Segoe UI', sans-serif; color: white; display: flex; flex-direction: column; height: 100vh; overflow: hidden; user-select: none; }
+        
+        /* GENERAL UI */
+        .hidden { display: none !important; }
+        button { cursor: pointer; border: none; font-family: inherit; }
+        
+        /* HOME BUTTON */
+        .home-btn { position: absolute; top: 15px; left: 15px; background: rgba(0,0,0,0.3); color: white; padding: 8px 15px; border-radius: 20px; font-weight: bold; z-index: 100; }
+
+        /* LOBBY SCREEN */
+        #lobby { text-align: center; margin-top: 10vh; padding: 20px; }
+        h1 { font-size: 40px; text-shadow: 2px 2px 0px #000; margin-bottom: 30px; }
+        
+        .lobby-card { background: white; color: #333; max-width: 400px; margin: 0 auto; padding: 30px; border-radius: 10px; box-shadow: 0 10px 20px rgba(0,0,0,0.3); }
+        select, .start-btn { width: 100%; padding: 15px; margin-bottom: 15px; border-radius: 5px; font-size: 18px; border: 2px solid #ddd; }
+        .start-btn { background: #333; color: white; font-weight: bold; border: none; margin-top: 10px; transition: 0.2s; }
+        .start-btn:hover { transform: scale(1.02); background: #000; }
+
+        /* GAME SCREEN */
+        #game-ui { flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
+        
+        /* Top Bar */
+        .top-stats { display: flex; justify-content: space-between; padding: 15px 20px; font-size: 20px; font-weight: bold; background: rgba(0,0,0,0.2); }
+        .streak-badge { background: #ff9f00; color: #333; padding: 2px 10px; border-radius: 10px; }
+
+        /* Question Area */
+        .question-box { background: white; color: #333; width: 90%; max-width: 600px; margin: 20px auto; padding: 40px 20px; text-align: center; border-radius: 5px; box-shadow: 0 5px 15px rgba(0,0,0,0.2); position: relative; }
+        .q-text { font-size: 60px; font-family: "KaiTi", "楷体", serif; margin: 0; }
+        .q-pinyin { font-size: 24px; color: #666; margin-top: 10px; font-weight: bold; }
+
+        /* Timer Bar */
+        .timer-track { width: 100%; height: 10px; background: rgba(0,0,0,0.3); }
+        .timer-fill { height: 100%; background: #fff; width: 100%; transition: width 0.1s linear; }
+
+        /* Answer Grid */
+        .answer-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 10px; height: 35vh; }
+        .ans-btn { color: white; font-size: 24px; font-weight: bold; border-radius: 5px; display: flex; align-items: center; justify-content: center; position: relative; text-shadow: 1px 1px 2px rgba(0,0,0,0.5); transition: opacity 0.2s; box-shadow: 0 4px 0 rgba(0,0,0,0.2); }
+        .ans-btn:active { transform: translateY(4px); box-shadow: none; }
+        
+        /* Colors */
+        .btn-red { background: #e21b3c; }    /* Triangle */
+        .btn-blue { background: #1368ce; }   /* Diamond */
+        .btn-yellow { background: #d89e00; } /* Circle */
+        .btn-green { background: #26890c; }  /* Square */
+
+        /* Feedback Overlay */
+        #feedback-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.85); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 50; }
+        .fb-icon { font-size: 80px; margin-bottom: 20px; }
+        .fb-text { font-size: 30px; font-weight: bold; }
+        .fb-score { font-size: 20px; margin-top: 10px; color: #ff9f00; }
+
+        /* RESULT SCREEN */
+        #result-screen { text-align: center; margin-top: 10vh; }
+        .final-score { font-size: 80px; font-weight: bold; margin: 20px 0; }
+
+        /* MOBILE FIX */
+        @media (max-width: 600px) {
+            .answer-grid { grid-template-columns: 1fr; height: auto; padding-bottom: 20px; }
+            .ans-btn { padding: 25px; }
+            .q-text { font-size: 50px; }
+        }
+    </style>
+</head>
+<body>
+
+<button class="home-btn" onclick="window.location.href='index.html'">🏠 Exit</button>
+
+<!-- LOBBY -->
+<div id="lobby">
+    <h1>Mandarin Smash 💥</h1>
+    <div class="lobby-card">
+        <label style="display:block; text-align:left; margin-bottom:5px; font-weight:bold;">Choose Topic:</label>
+        <select id="group-select"></select>
+        
+        <label style="display:block; text-align:left; margin-bottom:5px; font-weight:bold;">Time Limit:</label>
+        <select id="time-select">
+            <option value="20">20 Seconds (Chill)</option>
+            <option value="10" selected>10 Seconds (Normal)</option>
+            <option value="5">5 Seconds (Panic)</option>
+        </select>
+
+        <button class="start-btn" onclick="startGame()">Start Game</button>
+    </div>
+</div>
+
+<!-- GAME UI -->
+<div id="game-ui" class="hidden">
+    <div class="top-stats">
+        <div id="score-display">Score: 0</div>
+        <div id="streak-display" class="streak-badge">Streak: 0</div>
+    </div>
+
+    <div class="question-box">
+        <h2 class="q-text" id="q-char">?</h2>
+        <div class="q-pinyin" id="q-pinyin"></div>
+    </div>
+
+    <div>
+        <div class="timer-track"><div class="timer-fill" id="timer-bar"></div></div>
+        <div class="answer-grid">
+            <button class="ans-btn btn-red" onclick="handleAnswer(0)"><span style="position:absolute; left:15px; font-size:16px;">▲</span> <span id="opt-0">...</span></button>
+            <button class="ans-btn btn-blue" onclick="handleAnswer(1)"><span style="position:absolute; left:15px; font-size:16px;">◆</span> <span id="opt-1">...</span></button>
+            <button class="ans-btn btn-yellow" onclick="handleAnswer(2)"><span style="position:absolute; left:15px; font-size:16px;">●</span> <span id="opt-2">...</span></button>
+            <button class="ans-btn btn-green" onclick="handleAnswer(3)"><span style="position:absolute; left:15px; font-size:16px;">■</span> <span id="opt-3">...</span></button>
+        </div>
+    </div>
+</div>
+
+<!-- FEEDBACK OVERLAY -->
+<div id="feedback-overlay" class="hidden">
+    <div class="fb-icon" id="fb-icon">✅</div>
+    <div class="fb-text" id="fb-text">Correct!</div>
+    <div class="fb-score" id="fb-pts">+100</div>
+</div>
+
+<!-- RESULT SCREEN -->
+<div id="result-screen" class="hidden">
+    <h1>Game Over</h1>
+    <div class="lobby-card">
+        <p>Final Score</p>
+        <div class="final-score" id="final-score">0</div>
+        <button class="start-btn" onclick="location.reload()">Play Again</button>
+    </div>
+</div>
+
+<script>
+    // --- DATA ---
+    let fullDB = { words: [], groups: [] };
+    let gameQueue = [];
+    let currentQuestion = null;
+    
+    // --- STATE ---
+    let score = 0;
+    let streak = 0;
+    let timeLimit = 10;
+    let timeLeft = 10;
+    let timerInterval = null;
+    let options = []; // Current 4 choices
+
+    // --- INIT ---
+    function init() {
+        try {
+            const local = localStorage.getItem('mandarinFinalSuite_V12');
+            if (local) fullDB = JSON.parse(local);
+        } catch(e) {}
+
+        const sel = document.getElementById('group-select');
+        sel.innerHTML = '<option value="all">📚 All Words</option>';
+        fullDB.groups.forEach(g => {
+            if(g.wordIds.length >= 4) { // Only show groups big enough for a quiz
+                sel.innerHTML += `<option value="${g.id}">📁 ${g.name}</option>`;
+            }
+        });
+    }
+
+    // --- GAME LOGIC ---
+    function startGame() {
+        const gid = document.getElementById('group-select').value;
+        timeLimit = parseInt(document.getElementById('time-select').value);
+        
+        // Filter Words
+        let candidates = fullDB.words;
+        if(gid !== 'all') {
+            const g = fullDB.groups.find(x => x.id == gid);
+            if(g) candidates = candidates.filter(w => g.wordIds.includes(w.id));
+        }
+
+        if(candidates.length < 4) return alert("Not enough words! You need at least 4 words to play.");
+
+        // Shuffle and set queue
+        gameQueue = [...candidates].sort(() => Math.random() - 0.5);
+        
+        // Reset Stats
+        score = 0;
+        streak = 0;
+        updateStats();
+
+        // UI Switch
+        document.getElementById('lobby').classList.add('hidden');
+        document.getElementById('game-ui').classList.remove('hidden');
+
+        nextRound();
+    }
+
+    function nextRound() {
+        if(gameQueue.length === 0) return endGame();
+
+        currentQuestion = gameQueue.shift();
+        
+        // 1. Generate Options (1 Correct + 3 Wrong)
+        // Get all OTHER words
+        const pool = fullDB.words.filter(w => w.id !== currentQuestion.id);
+        const distractors = pool.sort(() => Math.random() - 0.5).slice(0, 3);
+        
+        options = [currentQuestion, ...distractors];
+        options.sort(() => Math.random() - 0.5); // Shuffle position
+
+        // 2. Render UI
+        document.getElementById('q-char').innerText = currentQuestion.char;
+        document.getElementById('q-pinyin').innerText = ""; // Hide pinyin at first? Or show it? Let's hide for challenge.
+        // Actually, for Kahoot style, usually you see the 'Question'. Let's show Pinyin.
+        document.getElementById('q-pinyin').innerText = currentQuestion.pinyin;
+
+        options.forEach((opt, idx) => {
+            const btn = document.getElementById(`opt-${idx}`);
+            btn.innerText = opt.meaning;
+            // Reset colors
+            btn.parentElement.style.opacity = "1";
+        });
+
+        // 3. Start Timer
+        resetTimer();
+    }
+
+    function resetTimer() {
+        if(timerInterval) clearInterval(timerInterval);
+        timeLeft = timeLimit;
+        const bar = document.getElementById('timer-bar');
+        
+        timerInterval = setInterval(() => {
+            timeLeft -= 0.1;
+            const pct = (timeLeft / timeLimit) * 100;
+            bar.style.width = pct + "%";
+            
+            // Color Shift
+            if(pct > 50) bar.style.background = "#fff";
+            else if(pct > 20) bar.style.background = "#f1c40f";
+            else bar.style.background = "#e74c3c";
+
+            if(timeLeft <= 0) {
+                clearInterval(timerInterval);
+                handleAnswer(-1); // Time out
+            }
+        }, 100);
+    }
+
+    function handleAnswer(idx) {
+        clearInterval(timerInterval);
+        
+        const isCorrect = idx !== -1 && options[idx].id === currentQuestion.id;
+        const feedback = document.getElementById('feedback-overlay');
+        const fbIcon = document.getElementById('fb-icon');
+        const fbText = document.getElementById('fb-text');
+        const fbPts = document.getElementById('fb-pts');
+
+        if(isCorrect) {
+            streak++;
+            // Score calc: Base 100 + (Time Left * 10) * Streak Multiplier
+            const streakMult = Math.min(streak, 5); // Max 5x multiplier logic
+            const pts = Math.floor((100 + (timeLeft * 10)) * (1 + (streak/10)));
+            score += pts;
+            
+            fbIcon.innerText = "✅";
+            fbText.innerText = "Correct!";
+            fbPts.innerText = `+${pts}`;
+            fbText.style.color = "#2ecc71";
+            
+            // Log Activity for Heatmap
+            logActivity();
+
+        } else {
+            streak = 0;
+            fbIcon.innerText = "❌";
+            fbText.innerText = "Wrong!";
+            fbPts.innerText = `Correct was: ${currentQuestion.meaning}`;
+            fbText.style.color = "#e74c3c";
+        }
+
+        updateStats();
+        
+        // Show Feedback
+        feedback.classList.remove('hidden');
+        
+        // Wait then Next
+        setTimeout(() => {
+            feedback.classList.add('hidden');
+            nextRound();
+        }, 2000);
+    }
+
+    function updateStats() {
+        document.getElementById('score-display').innerText = `Score: ${score}`;
+        document.getElementById('streak-display').innerText = `Streak: ${streak} 🔥`;
+    }
+
+    function endGame() {
+        document.getElementById('game-ui').classList.add('hidden');
+        document.getElementById('result-screen').classList.remove('hidden');
+        document.getElementById('final-score').innerText = score;
+    }
+
+    // --- ACTIVITY LOGGER ---
+    function logActivity() {
+        const todayKey = new Date().toISOString().split('T')[0];
+        if(!fullDB.activityLog) fullDB.activityLog = {};
+        if(!fullDB.activityLog[todayKey]) fullDB.activityLog[todayKey] = 0;
+        fullDB.activityLog[todayKey]++;
+        localStorage.setItem('mandarinFinalSuite_V12', JSON.stringify(fullDB));
+    }
+
+    init();
+</script>
+</body>
+</html>

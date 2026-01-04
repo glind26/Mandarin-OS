@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Mandarin Screensaver 💿</title>
+    <style>
+        body { 
+            background: #000; 
+            margin: 0; 
+            overflow: hidden; 
+            cursor: none; /* Hide cursor for immersion */
+        }
+        canvas { display: block; }
+        #controls {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            color: #333;
+            font-family: sans-serif;
+            font-size: 12px;
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+        body:hover #controls { opacity: 1; cursor: default; }
+        
+        #corner-counter {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            color: #333;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+<canvas id="canvas"></canvas>
+<div id="corner-counter">Corner Hits: 0</div>
+<div id="controls">Move mouse to see cursor • Click to Exit</div>
+
+<script>
+    // --- 1. SETUP & DB ---
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    let width, height;
+    
+    // Default list
+    const defaultList = [
+        {char: "你好", pinyin: "nǐ hǎo", meaning: "Hello"},
+        {char: "学习", pinyin: "xué xí", meaning: "Study"},
+        {char: "休息", pinyin: "xiū xi", meaning: "Rest"},
+        {char: "电脑", pinyin: "diàn nǎo", meaning: "Computer"},
+        {char: "咖啡", pinyin: "kā fēi", meaning: "Coffee"}
+    ];
+    let db = [...defaultList];
+
+    function loadDB() {
+        try {
+            const local = localStorage.getItem('mandarinFinalSuite_V12');
+            if (local) {
+                const parsed = JSON.parse(local);
+                if (parsed.words && parsed.words.length > 0) db = parsed.words;
+            }
+        } catch(e) {}
+    }
+
+    function resize() {
+        width = canvas.width = window.innerWidth;
+        height = canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resize);
+    loadDB();
+    resize();
+
+    // --- 2. DVD LOGIC ---
+    // Vibrant DVD colors
+    const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#00ffff', '#ff00ff', '#ff8800'];
+    
+    const logo = {
+        x: Math.random() * (window.innerWidth - 200),
+        y: Math.random() * (window.innerHeight - 100),
+        w: 220, // Approximate width of text box
+        h: 120, // Approximate height of text box
+        dx: 2.5, // Speed X
+        dy: 2.5, // Speed Y
+        color: colors[0],
+        word: db[0]
+    };
+
+    let cornerHits = 0;
+
+    function pickNewWord() {
+        const r = Math.floor(Math.random() * db.length);
+        logo.word = db[r];
+    }
+
+    function pickNewColor() {
+        let newC;
+        do { newC = colors[Math.floor(Math.random() * colors.length)]; } while(newC === logo.color);
+        logo.color = newC;
+    }
+
+    function update() {
+        // Move
+        logo.x += logo.dx;
+        logo.y += logo.dy;
+
+        // Collision State
+        let hitX = false;
+        let hitY = false;
+
+        // Wall Checks
+        if (logo.x + logo.w >= width) { logo.dx = -Math.abs(logo.dx); hitX = true; }
+        else if (logo.x <= 0)         { logo.dx = Math.abs(logo.dx); hitX = true; }
+
+        if (logo.y + logo.h >= height) { logo.dy = -Math.abs(logo.dy); hitY = true; }
+        else if (logo.y <= 0)          { logo.dy = Math.abs(logo.dy); hitY = true; }
+
+        // Logic on Hit
+        if (hitX || hitY) {
+            pickNewColor();
+            pickNewWord();
+            
+            // Check for the legendary CORNER HIT
+            if (hitX && hitY) {
+                cornerHits++;
+                document.getElementById('corner-counter').innerText = `Corner Hits: ${cornerHits} (LEGENDARY!)`;
+                document.getElementById('corner-counter').style.color = '#fff';
+            }
+        }
+    }
+
+    function draw() {
+        // Leave a slight trail for "ghosting" effect, or clear completely
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, width, height);
+
+        // Draw Text Group
+        ctx.fillStyle = logo.color;
+        ctx.textAlign = "left";
+        ctx.textBaseline = "top";
+        
+        // 1. Hanzi (Huge)
+        ctx.font = 'bold 80px "KaiTi", "楷体", serif';
+        ctx.fillText(logo.word.char, logo.x, logo.y);
+        
+        // Measure Hanzi width to center the pinyin below it approx
+        const m = ctx.measureText(logo.word.char);
+        const centerX = logo.x + (m.width / 2);
+        
+        // 2. Pinyin
+        ctx.fillStyle = "#fff";
+        ctx.font = '20px sans-serif';
+        ctx.textAlign = "center";
+        ctx.fillText(logo.word.pinyin, centerX, logo.y + 90);
+        
+        // 3. Meaning
+        ctx.fillStyle = "#888";
+        ctx.font = 'italic 16px sans-serif';
+        ctx.fillText(logo.word.meaning, centerX, logo.y + 115);
+
+        // Update dimensions based on text size (dynamic collision box)
+        logo.w = Math.max(200, m.width);
+    }
+
+    function loop() {
+        update();
+        draw();
+        requestAnimationFrame(loop);
+    }
+
+    // Exit on click
+    window.addEventListener('mousedown', () => window.close());
+
+    loop();
+</script>
+</body>
+</html>

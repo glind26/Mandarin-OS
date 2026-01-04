@@ -1,0 +1,12 @@
+// --- 1. FIREBASE CONFIG ---
+    // ⚠️ REPLACE THIS BLOCK WITH YOUR KEY FROM GOOGLE ⚠️
+    const firebaseConfig = {
+  apiKey: "AIzaSyDY6QN-GbW0JLfnQK1jU08Gf6zk0BuRtRw",
+  authDomain: "mandarin-smash.firebaseapp.com",
+  databaseURL: "https://mandarin-smash-default-rtdb.firebaseio.com",
+  projectId: "mandarin-smash",
+  storageBucket: "mandarin-smash.firebasestorage.app",
+  messagingSenderId: "282254806408",
+  appId: "1:282254806408:web:2ff34640121186ae2bfe3d",
+  measurementId: "G-BHMZKHBYSF"
+};

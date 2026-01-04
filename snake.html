@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Mandarin Snake 🐍</title>
+    <style>
+        body { background: #1a1a1b; color: white; font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; overflow: hidden; }
+        
+        #game-ui { text-align: center; position: relative; }
+        canvas { background: #000; border: 4px solid #333; box-shadow: 0 0 20px rgba(0,255,127,0.2); border-radius: 4px; display: block; }
+        
+        .hud { display: flex; justify-content: space-between; width: 600px; margin-bottom: 10px; font-weight: bold; }
+        .target-box { background: #333; padding: 10px 20px; border-radius: 8px; border-bottom: 4px solid #222; min-width: 200px; }
+        .target-word { font-size: 24px; color: #00ff7f; }
+        .score-board { font-size: 20px; color: #ffd700; align-self: center; }
+        
+        #start-screen, #game-over-screen { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.9); padding: 40px; border-radius: 15px; border: 2px solid #00ff7f; text-align: center; width: 300px; }
+        button { background: #00ff7f; color: #000; border: none; padding: 10px 20px; font-size: 18px; font-weight: bold; cursor: pointer; border-radius: 5px; margin-top: 20px; }
+        button:hover { background: #00cc66; }
+        
+        .hidden { display: none !important; }
+        .subtext { color: #888; font-size: 12px; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="hud">
+    <div class="target-box">
+        Find: <span id="target-display" class="target-word">...</span>
+    </div>
+    <div class="score-board">Score: <span id="score">0</span></div>
+</div>
+
+<div id="game-ui">
+    <canvas id="gameCanvas" width="600" height="600"></canvas>
+    
+    <!-- START SCREEN -->
+    <div id="start-screen">
+        <h1 style="margin:0; color:#00ff7f;">Mandarin Snake</h1>
+        <p>Eat the character that matches the English word!</p>
+        <p id="db-status" style="font-size:12px; color: #aaa;">Checking database...</p>
+        <button onclick="startGame()">▶ Start Game</button>
+        <div class="subtext">Use Arrow Keys to Move</div>
+    </div>
+
+    <!-- GAME OVER SCREEN -->
+    <div id="game-over-screen" class="hidden">
+        <h1 style="color:#ff4444;">Game Over</h1>
+        <p>Final Score: <span id="final-score">0</span></p>
+        <button onclick="startGame()">↺ Try Again</button>
+        <br><br>
+        <a href="javascript:history.back()" style="color:white; text-decoration:none; font-size:14px;">← Back to App</a>
+    </div>
+</div>
+
+<!-- FLOATING HOME BUTTON -->
+<button onclick="window.location.href='index.html'" style="position:fixed; top:10px; left:10px; z-index:1000; background:rgba(0,0,0,0.5); color:white; border:none; padding:10px 15px; border-radius:20px; font-size:16px; cursor:pointer;">
+    🏠 Home
+</button>
+
+<script>
+    // --- 1. DATABASE LOADING ---
+    let wordList = [];
+    
+    // Default fallback list (in case files can't talk)
+    const defaultList = [
+        {char: "你好", meaning: "Hello"}, {char: "谢谢", meaning: "Thank you"},
+        {char: "猫", meaning: "Cat"}, {char: "狗", meaning: "Dog"},
+        {char: "水", meaning: "Water"}, {char: "茶", meaning: "Tea"},
+        {char: "大", meaning: "Big"}, {char: "小", meaning: "Small"},
+        {char: "人", meaning: "Person"}, {char: "家", meaning: "Family"}
+    ];
+
+    function loadDB() {
+        const statusEl = document.getElementById('db-status');
+        try {
+            // Try to read the main app's save file
+            const localData = localStorage.getItem('mandarinFinalSuite_V12');
+            if (localData) {
+                const parsed = JSON.parse(localData);
+                if (parsed.words && parsed.words.length > 5) {
+                    wordList = parsed.words;
+                    statusEl.innerText = `✅ Loaded ${wordList.length} words from your library!`;
+                    statusEl.style.color = '#00ff7f';
+                    return;
+                }
+            }
+        } catch(e) { console.log("Security block: using defaults"); }
+        
+        // Fallback
+        wordList = defaultList;
+        statusEl.innerText = "⚠️ Using default list (Security limitation)";
+    }
+
+    // --- 2. GAME VARIABLES ---
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const gridSize = 30; // Size of each square
+    const tileCount = canvas.width / gridSize;
+    
+    let score = 0;
+    let snake = [];
+    let velocity = { x: 0, y: 0 };
+    let foodItems = []; // Array of 3 food objects
+    let targetWord = null;
+    let gameInterval;
+    let isGameRunning = false;
+
+    // --- 3. GAME LOGIC ---
+    function startGame() {
+        if(wordList.length === 0) loadDB();
+        
+        snake = [{x: 10, y: 10}, {x: 9, y: 10}, {x: 8, y: 10}];
+        velocity = { x: 1, y: 0 }; // Start moving right
+        score = 0;
+        document.getElementById('score').innerText = score;
+        document.getElementById('start-screen').classList.add('hidden');
+        document.getElementById('game-over-screen').classList.add('hidden');
+        
+        spawnRound();
+        isGameRunning = true;
+        
+        if(gameInterval) clearInterval(gameInterval);
+        gameInterval = setInterval(gameLoop, 150); // Speed (lower = faster)
+    }
+
+    function spawnRound() {
+        // 1. Pick a random target word
+        const targetObj = wordList[Math.floor(Math.random() * wordList.length)];
+        targetWord = targetObj;
+        document.getElementById('target-display').innerText = targetObj.meaning;
+
+        // 2. Pick 2 decoys (wrong answers)
+        let pool = wordList.filter(w => w.char !== targetObj.char);
+        // Shuffle pool
+        pool.sort(() => 0.5 - Math.random());
+        const decoys = pool.slice(0, 2);
+
+        // 3. Place them on board (ensure no overlap with snake or each other)
+        foodItems = [];
+        const itemsToPlace = [targetObj, ...decoys];
+        
+        itemsToPlace.forEach(item => {
+            let pos;
+            do {
+                pos = {
+                    x: Math.floor(Math.random() * tileCount),
+                    y: Math.floor(Math.random() * tileCount)
+                };
+            } while (snake.some(s => s.x === pos.x && s.y === pos.y) || foodItems.some(f => f.x === pos.x && f.y === pos.y));
+            
+            foodItems.push({ ...pos, char: item.char, isCorrect: item.char === targetObj.char });
+        });
+    }
+
+    function gameLoop() {
+        // Move Snake
+        const head = { x: snake[0].x + velocity.x, y: snake[0].y + velocity.y };
+
+        // Wall Collision (Game Over)
+        if (head.x < 0 || head.x >= tileCount || head.y < 0 || head.y >= tileCount || snake.some(s => s.x === head.x && s.y === head.y)) {
+            gameOver();
+            return;
+        }
+
+        snake.unshift(head); // Add new head
+
+        // Check Food Collision
+        const eatenIndex = foodItems.findIndex(f => f.x === head.x && f.y === head.y);
+        
+        if (eatenIndex !== -1) {
+            const eatenFood = foodItems[eatenIndex];
+            if (eatenFood.isCorrect) {
+                // Correct! Grow snake, score up
+                score += 10;
+                document.getElementById('score').innerText = score;
+                // Don't pop tail (growing)
+                spawnRound(); // New target
+            } else {
+                // Wrong! Shrink or Die
+                score = Math.max(0, score - 5);
+                document.getElementById('score').innerText = score;
+                snake.pop(); // Remove tail (normal move)
+                snake.pop(); // Penalty: Remove another segment!
+                if(snake.length === 0) { gameOver(); return; }
+                
+                // Remove the wrong food item so user can try for the right one
+                foodItems.splice(eatenIndex, 1);
+            }
+        } else {
+            snake.pop(); // Normal movement (remove tail)
+        }
+
+        draw();
+    }
+
+    function draw() {
+        // Background
+        ctx.fillStyle = '#111';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Snake
+        snake.forEach((part, index) => {
+            ctx.fillStyle = index === 0 ? '#00ff7f' : '#00aa55'; // Head is bright green
+            ctx.fillRect(part.x * gridSize, part.y * gridSize, gridSize - 2, gridSize - 2);
+        });
+
+        // Food
+        ctx.font = '20px "Microsoft YaHei", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        
+        foodItems.forEach(food => {
+            // Draw box
+            ctx.fillStyle = '#333';
+            ctx.fillRect(food.x * gridSize, food.y * gridSize, gridSize - 2, gridSize - 2);
+            // Draw Char
+            ctx.fillStyle = '#fff';
+            ctx.fillText(food.char, (food.x * gridSize) + (gridSize/2), (food.y * gridSize) + (gridSize/2));
+        });
+    }
+
+    function gameOver() {
+        isGameRunning = false;
+        clearInterval(gameInterval);
+        document.getElementById('final-score').innerText = score;
+        document.getElementById('game-over-screen').classList.remove('hidden');
+    }
+
+    // --- 4. CONTROLS ---
+    window.addEventListener('keydown', e => {
+        if (!isGameRunning) return;
+        switch(e.key) {
+            case 'ArrowUp': if(velocity.y !== 1) velocity = {x: 0, y: -1}; break;
+            case 'ArrowDown': if(velocity.y !== -1) velocity = {x: 0, y: 1}; break;
+            case 'ArrowLeft': if(velocity.x !== 1) velocity = {x: -1, y: 0}; break;
+            case 'ArrowRight': if(velocity.x !== -1) velocity = {x: 1, y: 0}; break;
+        }
+    });
+
+    // Init
+    loadDB();
+</script>
+</body>
+</html>

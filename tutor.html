@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Mandarin Tutor 🤖</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        /* 1. THEME VARIABLES */
+        :root {
+            --bg: #f0f2f5; --header: #2c3e50; --text: #333; --subtext: #666;
+            --user-bubble: #3498db; --user-text: white;
+            --ai-bubble: #ffffff; --ai-text: #333;
+            --input-area: #ffffff; --border: #ddd; --input-bg: white;
+            --quiz-btn: #ffffff; --quiz-text: #333; --quiz-hover: #f8f9fa;
+        }
+
+        body.theme-dark {
+            --bg: #1a1a1b; --header: #000000; --text: #e1e1e1; --subtext: #aaa;
+            --user-bubble: #3c6382; --user-text: #eee;
+            --ai-bubble: #2d2d2e; --ai-text: #e1e1e1;
+            --input-area: #1f1f1f; --border: #333; --input-bg: #2d2d2e;
+            --quiz-btn: #2d2d2e; --quiz-text: #e1e1e1; --quiz-hover: #3a3a3b;
+        }
+
+        body.theme-midnight {
+            --bg: #000000; --header: #121212; --text: #bb86fc; --subtext: #03dac6;
+            --user-bubble: #3700b3; --user-text: #fff;
+            --ai-bubble: #121212; --ai-text: #03dac6;
+            --input-area: #121212; --border: #333; --input-bg: #1f1f1f;
+            --quiz-btn: #121212; --quiz-text: #03dac6; --quiz-hover: #1f1f1f;
+        }
+        
+        /* 2. BASE STYLES */
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; flex-direction: column; height: 100vh; transition: background 0.3s; }
+        
+        /* HEADER */
+        header { background: var(--header); color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
+        h1 { margin: 0; font-size: 18px; display: flex; align-items: center; gap: 10px; }
+        .status-dot { width: 10px; height: 10px; background: #e74c3c; border-radius: 50%; display: inline-block; }
+        .status-ready { background: #2ecc71; box-shadow: 0 0 5px #2ecc71; }
+        
+        select { background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.3); padding: 5px; border-radius: 4px; margin-right: 10px; cursor: pointer; }
+        select option { background: #333; color: white; }
+
+        button { cursor: pointer; border: none; padding: 8px 12px; border-radius: 4px; font-weight: bold; transition: 0.2s; }
+        .btn-ghost { background: rgba(255,255,255,0.1); color: white; }
+        .btn-ghost:hover { background: rgba(255,255,255,0.2); }
+        
+        /* NEW: GAME BUTTON */
+        .btn-game { background: #f39c12; color: white; margin-right: 10px; }
+        .btn-game:hover { background: #d35400; }
+
+        /* CHAT AREA */
+        #chat-container { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 15px; scroll-behavior: smooth; }
+        
+        .msg { max-width: 80%; padding: 12px 16px; border-radius: 12px; line-height: 1.5; font-size: 15px; position: relative; word-wrap: break-word; }
+        .msg p { margin: 0 0 10px 0; } .msg p:last-child { margin: 0; }
+        
+        .user-msg { align-self: flex-end; background: var(--user-bubble); color: var(--user-text); border-bottom-right-radius: 2px; }
+        .ai-msg { align-self: flex-start; background: var(--ai-bubble); color: var(--ai-text); border-bottom-left-radius: 2px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .sys-msg { align-self: center; font-size: 12px; color: var(--subtext); background: rgba(0,0,0,0.05); padding: 5px 12px; border-radius: 20px; }
+
+        /* QUIZ CARDS IN CHAT */
+        .quiz-card { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+        .quiz-opt { 
+            background: var(--quiz-btn); color: var(--quiz-text); 
+            border: 1px solid var(--border); padding: 10px; 
+            border-radius: 8px; text-align: left; cursor: pointer; transition: 0.2s; 
+        }
+        .quiz-opt:hover { background: var(--quiz-hover); transform: translateX(5px); }
+        .quiz-opt.correct { background: #27ae60 !important; color: white !important; border-color: #27ae60; }
+        .quiz-opt.wrong { background: #e74c3c !important; color: white !important; border-color: #e74c3c; opacity: 0.6; }
+
+        /* INPUT AREA */
+        .input-area { background: var(--input-area); padding: 20px; border-top: 1px solid var(--border); display: flex; gap: 10px; }
+        textarea { flex: 1; padding: 12px; border: 2px solid var(--border); background: var(--input-bg); color: var(--text); border-radius: 8px; resize: none; height: 24px; font-family: inherit; outline: none; transition: 0.3s; }
+        textarea:focus { border-color: var(--user-bubble); }
+        .send-btn { background: var(--user-bubble); color: var(--user-text); width: 50px; border-radius: 8px; font-size: 20px; display: flex; align-items: center; justify-content: center; }
+        .send-btn:hover { opacity: 0.9; }
+        .send-btn:disabled { background: var(--subtext); cursor: not-allowed; }
+
+        /* MODAL */
+        #key-modal { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:1000; display:flex; align-items:center; justify-content:center; }
+        .modal-box { background: var(--input-area); color: var(--text); padding: 30px; border-radius: 10px; width: 400px; text-align: center; border: 1px solid var(--border); }
+        input[type="text"] { width: 90%; padding: 10px; margin: 15px 0; border: 2px solid var(--border); background: var(--input-bg); color: var(--text); border-radius: 5px; }
+    </style>
+</head>
+<body>
+
+<header>
+    <button class="btn-ghost" onclick="window.location.href='index.html'" style="margin-right:10px;">🏠</button>
+    <h1><span id="status" class="status-dot"></span> AI Laoshi</h1>
+    <div>
+        <button class="btn-game" onclick="startQuizMode()">🎮 Play Quiz</button>
+        <select id="theme-select" onchange="changeTheme(this.value)">
+            <option value="light">☀️ Light</option>
+            <option value="dark">🌙 Dark</option>
+            <option value="midnight">🌌 Midnight</option>
+        </select>
+        <button class="btn-ghost" onclick="resetKey()">🔑 Key</button>
+    </div>
+</header>
+
+<div id="chat-container">
+    <div class="msg sys-msg">Welcome! Ask me anything or click "Play Quiz" to test your knowledge.</div>
+</div>
+
+<div class="input-area">
+    <textarea id="user-input" placeholder="Type a message..." onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault(); sendMessage();}"></textarea>
+    <button id="send-btn" class="send-btn" onclick="sendMessage()">➤</button>
+</div>
+
+<!-- KEY MODAL -->
+<div id="key-modal">
+    <div class="modal-box">
+        <h2>Enter Gemini API Key</h2>
+        <input type="text" id="api-key-input" placeholder="Paste key here (starts with AIza...)">
+        <button class="send-btn" style="width:100%; height:40px;" onclick="saveKey()">Start Chatting</button>
+        <p style="font-size:12px; color:#999; margin-top:10px;"><a href="https://aistudio.google.com/app/apikey" target="_blank">Get a free key here</a></p>
+    </div>
+</div>
+
+<script>
+    let apiKey = localStorage.getItem('mandarinApiKey');
+    const chatContainer = document.getElementById('chat-container');
+    const userInput = document.getElementById('user-input');
+    const sendBtn = document.getElementById('send-btn');
+    
+    let history = [];
+    let vocabList = "";
+    let quizMemory = {};
+
+    // --- THEME LOGIC ---
+    function changeTheme(t) {
+        document.body.className = 'theme-' + t;
+        localStorage.setItem('tutorTheme', t);
+        const sel = document.getElementById('theme-select');
+        if(sel) sel.value = t;
+    }
+    changeTheme(localStorage.getItem('tutorTheme') || 'midnight');
+
+    // --- INIT & KEY ---
+    function checkKey() {
+        if(apiKey) {
+            document.getElementById('key-modal').style.display = 'none';
+            document.getElementById('status').classList.add('status-ready');
+            initBot();
+        } else {
+            document.getElementById('key-modal').style.display = 'flex';
+        }
+    }
+
+    function saveKey() {
+        const k = document.getElementById('api-key-input').value.trim();
+        if(!k) return alert("Please enter a key!");
+        localStorage.setItem('mandarinApiKey', k);
+        apiKey = k;
+        checkKey();
+    }
+
+    function resetKey() {
+        localStorage.removeItem('mandarinApiKey');
+        location.reload();
+    }
+
+    function initBot() {
+        try {
+            const db = JSON.parse(localStorage.getItem('mandarinFinalSuite_V12'));
+            if(db && db.words.length > 0) {
+                vocabList = db.words.slice(0, 50).map(w => w.char).join(", ");
+            }
+        } catch(e) {}
+    }
+
+    // --- CHAT LOGIC ---
+    async function sendMessage(overrideText = null, isQuiz = false) {
+        const text = overrideText || userInput.value.trim();
+        if(!text) return;
+
+        if(!isQuiz) {
+            addBubble(text, 'user');
+            history.push({ role: "user", parts: [{ text: text }] });
+        }
+        
+        userInput.value = '';
+        sendBtn.disabled = true;
+
+        const loadingId = addBubble(isQuiz ? "Generating Quiz..." : "Thinking...", 'ai', true);
+
+        try {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite-preview-02-05:generateContent?key=${apiKey}`;
+            
+            let finalPrompt = text;
+            if(!isQuiz) {
+                finalPrompt = `System: You are a friendly Mandarin Tutor. User's known words: [${vocabList}]. \nUser: ${text}`;
+            }
+
+            const payload = {
+                contents: [
+                    ...history, 
+                    { role: "user", parts: [{ text: finalPrompt }] }
+                ]
+            };
+
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await response.json();
+            document.getElementById(loadingId).remove();
+
+            if(data.candidates && data.candidates[0].content) {
+                let reply = data.candidates[0].content.parts[0].text;
+                
+                if(isQuiz) {
+                    try {
+                        let jsonStr = reply.replace(/```json/g, '').replace(/```/g, '').trim();
+                        const quizData = JSON.parse(jsonStr);
+                        renderQuiz(quizData);
+                        
+                        // FIX: Save the ACTUAL question to history so AI knows not to repeat it
+                        history.push({ role: "model", parts: [{ text: `I generated this quiz question: "${quizData.question}"` }] });
+                        
+                    } catch(err) {
+                        addBubble("AI Error: Failed to generate valid quiz data. Please try again.", 'sys');
+                    }
+                } else {
+                    addBubble(reply, 'ai');
+                    history.push({ role: "model", parts: [{ text: reply }] });
+                }
+            } else {
+                addBubble("Error: AI returned no text.", 'sys');
+            }
+
+        } catch(e) {
+            if(document.getElementById(loadingId)) document.getElementById(loadingId).remove();
+            addBubble("Connection Error.", 'sys');
+        }
+
+        sendBtn.disabled = false;
+    }
+
+    // --- QUIZ MODE (NOW WITH RANDOM TOPICS) ---
+    function startQuizMode() {
+        // 1. List of random scenarios to force variety
+        const topics = [
+            "Ordering Food", "Asking Directions", "Family Members", "Weather", "Shopping", 
+            "Hobbies", "Work/School", "Time & Dates", "Emotions", "Travel", "Internet/Tech",
+            "Health/Hospital", "Introducing Yourself", "Animals"
+        ];
+        // Pick one
+        const randomTopic = topics[Math.floor(Math.random() * topics.length)];
+        // Generate a random ID to ensure the prompt is cryptographically unique every time
+        const seed = Math.floor(Math.random() * 99999);
+
+        const prompt = `
+            Task: Generate a unique multiple-choice question in Mandarin Chinese (Simplified).
+            Topic: ${randomTopic} (Focus on this topic).
+            RandomSeed: ${seed}
+            
+            Constraint: Do NOT repeat any previous questions found in the chat history.
+            Constraint: Return ONLY raw JSON. No markdown.
+            
+            Format:
+            {
+                "question": "The Chinese sentence/question here",
+                "pinyin": "Pinyin for the question",
+                "options": ["Response A", "Response B", "Response C", "Response D"],
+                "correctIndex": 0,
+                "explanation": "Why the answer is correct (in English)"
+            }
+        `;
+        sendMessage(prompt, true);
+    }
+
+    function renderQuiz(data) {
+        const div = document.createElement('div');
+        div.className = 'msg ai-msg';
+        div.style.width = "85%";
+        const uniqueID = 'quiz-' + Date.now();
+        div.id = uniqueID;
+        quizMemory[uniqueID] = data;
+        
+        let html = `
+            <div style="font-size: 22px; font-weight: bold; color: var(--text);">${data.question}</div>
+            <div style="color: var(--subtext); margin-bottom: 15px;">${data.pinyin}</div>
+            <div style="font-size: 14px; color: var(--subtext); margin-bottom: 5px;">Select the best response:</div>
+            <div class="quiz-card">
+        `;
+        
+        data.options.forEach((opt, idx) => {
+            const cleanOpt = opt.replace(/^[A-D1-4][\.\)]\s*/, '');
+            html += `<button class="quiz-opt" id="${uniqueID}-btn-${idx}" onclick="handleQuizClick('${uniqueID}', ${idx})">${cleanOpt}</button>`;
+        });
+        
+        html += `
+            <div id="${uniqueID}-feedback" style="margin-top:10px; font-weight:bold; display:none;"></div>
+            <div id="${uniqueID}-next" style="margin-top:10px; display:none;">
+                <button class="btn-game" onclick="startQuizMode()">Next Question ➡</button>
+            </div>
+            </div>
+        `;
+
+        div.innerHTML = html;
+        chatContainer.appendChild(div);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    function handleQuizClick(uid, selectedIdx) {
+        const data = quizMemory[uid];
+        if(!data) return;
+
+        const correctIdx = data.correctIndex;
+        const explanation = data.explanation;
+        const container = document.getElementById(uid);
+        const btns = container.querySelectorAll('.quiz-opt');
+        const feedback = document.getElementById(`${uid}-feedback`);
+        const next = document.getElementById(`${uid}-next`);
+        
+        btns.forEach(b => b.disabled = true);
+
+        if(selectedIdx === correctIdx) {
+            document.getElementById(`${uid}-btn-${selectedIdx}`).classList.add('correct');
+            feedback.style.color = '#27ae60';
+            feedback.innerHTML = `✅ Correct! <br><span style="font-weight:normal; font-size:13px; color:var(--text)">${explanation}</span>`;
+        } else {
+            document.getElementById(`${uid}-btn-${selectedIdx}`).classList.add('wrong');
+            document.getElementById(`${uid}-btn-${correctIdx}`).classList.add('correct');
+            feedback.style.color = '#e74c3c';
+            feedback.innerHTML = `❌ Incorrect. <br><span style="font-weight:normal; font-size:13px; color:var(--text)">${explanation}</span>`;
+        }
+        
+        feedback.style.display = 'block';
+        next.style.display = 'block';
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    function addBubble(text, type, isLoading = false) {
+        const div = document.createElement('div');
+        div.className = `msg ${type}-msg`;
+        div.id = 'msg-' + Date.now();
+        if(isLoading) {
+            div.style.fontStyle = 'italic'; div.style.opacity = '0.7'; div.innerText = text;
+        } else if(type === 'ai') {
+            div.innerHTML = marked.parse(text);
+        } else {
+            div.innerText = text;
+        }
+        chatContainer.appendChild(div);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+        return div.id;
+    }
+
+    checkKey();
+</script>
+
+</body>
+</html>

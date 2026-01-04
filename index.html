@@ -1,0 +1,1875 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mandarin Learning :3</title>
+    <!-- Libraries -->
+    <script src="https://unpkg.com/pinyin-pro"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.5/dist/hanzi-writer.min.js"></script>
+
+    <!-- iOS Support -->
+    <link rel="apple-touch-icon" href="icon.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+    <!-- Manifest -->
+    <link rel="manifest" href="manifest.json">
+
+    <style>
+        /* HEATMAP STYLES */
+        /* UPDATED HEATMAP STYLES (Smaller & Cleaner) */
+        .heat-box {
+            width: 8px;
+            /* Smaller size (was 10px) */
+            height: 8px;
+            border-radius: 2px;
+            background: #e0e0e0;
+            margin: 1px;
+            /* Tiny gap instead of Flex gap */
+        }
+
+        /* Active States - FORCE GREEN (!important overrides the theme) */
+        .heat-1 {
+            background: #9be9a8 !important;
+        }
+
+        /* Light Green */
+        .heat-2 {
+            background: #40c463 !important;
+        }
+
+        .heat-3 {
+            background: #30a14e !important;
+        }
+
+        .heat-4 {
+            background: #216e39 !important;
+        }
+
+        /* Deep Green */
+
+        /* Dark Mode Adjustments */
+        body.theme-dark .heat-box,
+        body.theme-midnight .heat-box {
+            background: #2d2d2e;
+        }
+
+        /* BACKGROUND ANIMATION */
+        #bg-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            /* Puts it behind the content */
+            pointer-events: none;
+            /* Lets you click through it */
+            opacity: 0.9;
+            /* Subtle effect */
+        }
+
+        /* THEME VARIABLES */
+        :root {
+            --primary: #2c3e50;
+            --accent: #27ae60;
+            --warning: #f39c12;
+            --danger: #e74c3c;
+            --bg: #f0f2f5;
+            --card-bg: #ffffff;
+            --text: #2c3e50;
+            --subtext: #666666;
+            --border: #dddddd;
+            --grid-line: rgba(255, 182, 193, 0.4);
+            --ink: #2c3e50;
+            --sidebar-w: 220px;
+            --cell-size: 130px;
+        }
+
+        body.theme-dark {
+            --bg: #1a1a1b;
+            --card-bg: #2d2d2e;
+            --text: #e1e1e1;
+            --subtext: #a0a0a0;
+            --border: #444444;
+            --grid-line: rgba(255, 255, 255, 0.1);
+            --ink: #ffffff;
+            --primary: #34495e;
+        }
+
+        body.theme-sepia {
+            --bg: #f4ecd8;
+            --card-bg: #fdfaf1;
+            --text: #5b4636;
+            --subtext: #8d7a6b;
+            --border: #dcd0b9;
+            --grid-line: rgba(184, 53, 31, 0.15);
+            --ink: #5b4636;
+            --primary: #b8351f;
+        }
+
+        body.theme-midnight {
+            --bg: #000000;
+            --card-bg: #121212;
+            --text: #bb86fc;
+            --subtext: #03dac6;
+            --border: #333333;
+            --grid-line: rgba(187, 134, 252, 0.1);
+            --ink: #03dac6;
+            --primary: #1f1f1f;
+        }
+
+        body.theme-forest {
+            --bg: #e8f5e9;
+            --card-bg: #ffffff;
+            --text: #1b5e20;
+            --subtext: #4caf50;
+            --border: #c8e6c9;
+            --grid-line: rgba(27, 94, 32, 0.1);
+            --ink: #1b5e20;
+            --primary: #2e7d32;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: background 0.3s, color 0.3s;
+        }
+
+        nav {
+            background: var(--primary);
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            padding: 10px 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            flex-wrap: wrap;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        nav button,
+        nav select {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: 0.3s;
+            font-size: 13px;
+        }
+
+        nav button.active {
+            background: white;
+            color: var(--primary);
+            font-weight: bold;
+        }
+
+        .container {
+            max-width: 1000px;
+            width: 95%;
+            background: var(--card-bg);
+            margin: 20px 0;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+            box-sizing: border-box;
+            min-height: 85vh;
+        }
+
+        .view {
+            display: none;
+        }
+
+        .view.active {
+            display: block;
+        }
+
+        /* Writing Grid */
+        #writing-grid,
+        #quiz-writing-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            margin: 20px 0;
+            min-height: 150px;
+        }
+
+        .char-box {
+            position: relative;
+            width: var(--cell-size);
+            height: var(--cell-size);
+            border: 2px solid var(--primary);
+            background: var(--card-bg);
+            border-radius: 4px;
+            background-image: linear-gradient(to right, var(--grid-line) 1px, transparent 1px), linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
+            background-size: 50% 50%;
+        }
+
+        .ghost-char {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 80px;
+            color: var(--text);
+            opacity: 0.15;
+            pointer-events: none;
+            font-family: "楷体", "KaiTi", serif;
+            z-index: 1;
+            transition: opacity 0.3s;
+        }
+
+        .ghost-hidden {
+            opacity: 0 !important;
+        }
+
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 5;
+            cursor: crosshair;
+        }
+
+        /* Organization Layout */
+        .library-layout {
+            display: flex;
+            gap: 20px;
+            margin-top: 15px;
+            border-top: 1px solid var(--border);
+            padding-top: 15px;
+        }
+
+        .sidebar {
+            width: var(--sidebar-w);
+            border-right: 1px solid var(--border);
+            padding-right: 15px;
+        }
+
+        .main-content {
+            flex: 1;
+            overflow-x: auto;
+        }
+
+        .info-card {
+            background: var(--bg);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            margin-bottom: 15px;
+            border-left: 5px solid var(--primary);
+            position: relative;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            color: white;
+            font-weight: bold;
+            transition: 0.2s;
+            font-size: 12px;
+        }
+
+        .btn-green {
+            background: var(--accent);
+        }
+
+        .btn-blue {
+            background: var(--primary);
+        }
+
+        .btn-orange {
+            background: var(--warning);
+        }
+
+        .btn-red {
+            background: var(--danger);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            text-align: left;
+            padding: 10px;
+            border-bottom: 1px solid var(--border);
+            font-size: 13px;
+            color: var(--text);
+        }
+
+        .group-item {
+            padding: 8px;
+            cursor: pointer;
+            border-radius: 4px;
+            margin-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+            border: 1px solid transparent;
+            color: var(--text);
+        }
+
+        .group-item:hover {
+            background: var(--bg);
+        }
+
+        .group-item.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .mc-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .mc-btn {
+            padding: 15px;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            background: var(--card-bg);
+            cursor: pointer;
+            color: var(--text);
+        }
+
+        .mc-btn.correct {
+            background: var(--accent) !important;
+            color: white;
+        }
+
+        .mc-btn.wrong {
+            background: var(--danger) !important;
+            color: white;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        select,
+        input[type="text"],
+        textarea {
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid var(--border);
+            width: 100%;
+            box-sizing: border-box;
+            background: var(--card-bg);
+            color: var(--text);
+        }
+
+        .badge {
+            background: var(--border);
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 10px;
+            color: var(--subtext);
+        }
+
+        #stroke-helper {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: white;
+            border: 2px solid var(--primary);
+            border-radius: 10px;
+            z-index: 1000;
+            padding: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            display: none;
+            color: black;
+        }
+
+        /* --- MOBILE PATCH (Phone Fixes) --- */
+        @media (max-width: 768px) {
+
+            /* 1. Make the main card fill the screen */
+            .container {
+                width: 100%;
+                margin: 0;
+                border-radius: 0;
+                padding: 10px;
+                min-height: 100vh;
+            }
+
+            /* 2. Make Navigation scrollable sideways */
+            nav {
+                justify-content: flex-start;
+                overflow-x: auto;
+                white-space: nowrap;
+                padding: 10px 5px;
+            }
+
+            nav button,
+            nav select {
+                flex-shrink: 0;
+                /* Prevents squishing */
+                margin-right: 5px;
+            }
+
+            /* 3. Stack the Library (Sidebar on top, content below) */
+            .library-layout {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                border-right: none;
+                border-bottom: 2px solid var(--border);
+                padding-bottom: 20px;
+                margin-bottom: 20px;
+            }
+
+            /* 4. Fix Tables and Grids */
+            th,
+            td {
+                padding: 5px;
+                font-size: 11px;
+            }
+
+            .mc-grid {
+                grid-template-columns: 1fr;
+            }
+
+            /* Stack quiz buttons */
+
+            /* 5. Fix Modals */
+            #radical-modal>div,
+            #manual-add-modal>div {
+                width: 95% !important;
+                padding: 15px;
+            }
+        }
+
+        /* --- NEW SIDEBAR MENU STYLES --- */
+        #menu-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 900;
+            display: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        #menu-backdrop.open {
+            display: block;
+            opacity: 1;
+        }
+
+        #side-menu {
+            position: fixed;
+            top: 0;
+            left: -300px;
+            width: 260px;
+            height: 100%;
+            background: var(--card-bg);
+            z-index: 1000;
+            transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 2px 0 15px rgba(0, 0, 0, 0.3);
+            padding: 20px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            overflow-y: auto;
+        }
+
+        #side-menu.open {
+            left: 0;
+        }
+
+        .menu-header {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: var(--primary);
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--border);
+        }
+
+        .menu-item {
+            padding: 12px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            color: var(--text);
+            font-size: 16px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            transition: 0.2s;
+        }
+
+        .menu-item:hover {
+            background: var(--bg);
+            transform: translateX(5px);
+        }
+
+        .menu-item.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        /* Separator for external apps */
+        .menu-divider {
+            height: 1px;
+            background: var(--border);
+            margin: 10px 0;
+        }
+
+        .menu-sub {
+            font-size: 12px;
+            color: var(--subtext);
+            margin-left: 15px;
+            margin-top: 5px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* The Hamburger Button */
+        .nav-burger {
+            background: none !important;
+            border: none !important;
+            font-size: 24px !important;
+            padding: 0 !important;
+            cursor: pointer;
+            color: white;
+        }
+    </style>
+</head>
+
+<body class="theme-light">
+
+    <canvas id="bg-animation"></canvas>
+
+    <nav style="justify-content: flex-start; padding: 15px 20px; align-items: center;">
+        <button class="nav-burger" onclick="toggleMenu()">☰</button>
+        <span
+            style="font-weight:bold; color:white; font-size:20px; margin-left:20px; font-family:'Segoe UI', sans-serif;">Mandarin
+            OS</span>
+    </nav>
+
+    <!---
+    <nav>
+        <button id="tab-dashboard" class="active" onclick="switchView('dashboard')">🏠 Home</button>
+        <button id="tab-study" onclick="switchView('study')">Study Pad</button>
+        <button id="tab-dict" onclick="switchView('dict')">🔍 Dictionary</button>
+        <button id="tab-games" onclick="switchView('games')">🎮 Arcade</button>
+        <button id="tab-tutor" onclick="window.open('tutor.html', '_blank')">🤖 AI Tutor</button>
+        <button id="tab-read" onclick="window.open('stories.html', '_blank')">📖 Reader</button>
+        <button id="tab-flash" onclick="window.open('flashcards.html', '_blank')">⚡ Flashcards</button>
+        <button id="tab-deck" onclick="switchView('deck')">Library & Nodes</button>
+        <button id="tab-quiz" onclick="switchView('quiz')">Quiz</button>
+        <select id="theme-selector" onchange="changeTheme(this.value)">
+            <option value="light">☀️ Light</option>
+            <option value="dark">🌙 Dark</option>
+            <option value="sepia">📜 Traditional</option>
+            <option value="midnight">🌌 Midnight</option>
+            <option value="forest">🌲 Forest</option>
+        </select>
+    </nav>
+            -->
+
+
+    <!-- SLIDE-OUT MENU -->
+    <div id="menu-backdrop" onclick="toggleMenu()"></div>
+    <div id="side-menu">
+        <div class="menu-header">Menu</div>
+
+        <div class="menu-sub">Main</div>
+        <div class="menu-item active" id="link-dashboard" onclick="menuGo('dashboard')">🏠 Home Dashboard</div>
+        <div class="menu-item" id="link-study" onclick="menuGo('study')">✍️ Study Pad</div>
+        <div class="menu-item" id="link-dict" onclick="menuGo('dict')">🔍 Dictionary</div>
+        <div class="menu-item" id="link-deck" onclick="menuGo('deck')">📂 Library & Nodes</div>
+        <div class="menu-item" id="link-quiz" onclick="menuGo('quiz')">❓ Quiz Mode</div>
+        <div class="menu-item" id="link-games" onclick="menuGo('games')">🎮 Arcade</div>
+
+        <div class="menu-divider"></div>
+        <div class="menu-sub">Apps</div>
+
+        <div class="menu-item" onclick="window.open('flashcards.html', '_blank')">⚡ Flashcards (SRS)</div>
+        <div class="menu-item" onclick="window.open('smash_online.html', '_blank')">🌎 Smash Online</div>
+        <div class="menu-item" onclick="window.open('tutor.html', '_blank')">🤖 AI Tutor</div>
+        <div class="menu-item" onclick="window.open('galaxy.html', '_blank')">🌌 Galaxy Map</div>
+        <div class="menu-item" onclick="window.open('stories.html', '_blank')">📖 Reader</div>
+
+        <div class="menu-divider"></div>
+
+        <div class="menu-item" id="link-settings" onclick="menuGo('settings')">⚙️ Settings</div>
+    </div>
+
+    <div class="container">
+
+        <!-- 1. DASHBOARD / HOME -->
+        <div id="view-dashboard" class="view active">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <div>
+                    <h1 style="margin:0; color:var(--primary);">Welcome Back! 👋</h1>
+                    <p style="margin:0; color:var(--subtext);">Ready to expand your universe?</p>
+                </div>
+                <div style="text-align:right;">
+                    <h2 id="streak-display" style="margin:0; color:var(--warning); font-size: 32px;">0 🔥</h2>
+                    <span style="font-size:12px; color:var(--subtext);">Day Streak</span>
+                </div>
+            </div>
+
+            <!-- STATS CARDS -->
+            <div class="mc-grid" style="grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 25px;">
+                <div class="info-card" style="margin:0; border-left-color: var(--primary);">
+                    <h3 id="stat-total" style="margin:0; font-size:24px;">0</h3>
+                    <small>Total Words</small>
+                </div>
+                <div class="info-card" style="margin:0; border-left-color: var(--accent);">
+                    <h3 id="stat-today" style="margin:0; font-size:24px;">0</h3>
+                    <small>Studied Today</small>
+                </div>
+                <div class="info-card" style="margin:0; border-left-color: var(--danger);">
+                    <h3 id="stat-mastery" style="margin:0; font-size:24px;">0%</h3>
+                    <small>Mastery</small>
+                </div>
+            </div>
+
+            <!-- HEATMAP -->
+            <div class="info-card" style="text-align: left; margin-bottom: 25px;">
+                <h4 style="margin-top:0; margin-bottom:10px;">Activity Map (2026)</h4>
+                <div id="heatmap-grid" style="display: flex; flex-wrap: wrap; height: auto; padding: 5px;"></div>
+            </div>
+
+            <!-- QUICK ACTIONS -->
+            <h4 style="margin-bottom:10px;">Quick Actions</h4>
+            <div class="mc-grid">
+                <button class="mc-btn" onclick="window.open('flashcards.html', '_blank')">⚡ Review Flashcards</button>
+                <button class="mc-btn" onclick="window.open('smash_online.html', '_blank')">🌎 Smash Online
+                    (Multi)</button>
+                <button class="mc-btn" onclick="switchView('quiz'); initQuiz();">🎮 Take a Quiz</button>
+                <button class="mc-btn" onclick="window.open('galaxy.html', '_blank')">🌌 Galaxy Map</button>
+                <button class="mc-btn" onclick="window.open('kahoot.html', '_blank')">💥 Play Smash</button>
+            </div>
+        </div>
+
+        <!-- 2. STUDY VIEW -->
+        <div id="view-study" class="view">
+            <div style="display: flex; gap: 10px; margin-bottom: 15px; align-items: center; flex-wrap: wrap;">
+                <label>Studying:</label>
+                <select id="study-selector" style="margin:0; width: 180px;" onchange="initStudy()"></select>
+                <button class="btn btn-orange" onclick="shuffleStudy()">🔀 Shuffle</button>
+                <label style="font-size: 12px;"><input type="checkbox" id="fade-mode"> Fading Ghost</label>
+            </div>
+            <div class="info-card">
+                <div style="display:flex; justify-content: center; gap: 15px; align-items: center; margin-bottom:10px;">
+                    <h2 id="study-char" style="margin:0; font-family:'KaiTi'; font-size: 45px;">-</h2>
+                    <button class="btn btn-blue" onclick="speakCurrent('study')" title="Listen">🔊</button>
+                    <button class="btn btn-orange" onclick="showStrokeOrder()" title="Watch Animation">🎬</button>
+                    <button class="btn btn-green" onclick="showRadicals()" title="Radical Info">🧩</button>
+                </div>
+                <h3 id="study-pinyin" style="margin:5px 0; color:var(--accent)"></h3>
+                <p id="study-meaning" style="margin:0; color:var(--subtext); font-weight: bold;"></p>
+            </div>
+            <div id="writing-grid"></div>
+            <div class="controls">
+                <button class="btn btn-blue" onclick="prevCard()">Prev</button>
+                <button class="btn btn-orange" onclick="clearAllCanvases()">Clear</button>
+                <button class="btn btn-blue" onclick="nextCard()">Next</button>
+            </div>
+        </div>
+
+        <!-- 3. DICTIONARY -->
+        <div id="view-dict" class="view">
+            <h2>Dictionary</h2>
+            <div style="display: flex; gap:10px;">
+                <input type="text" id="dict-input" placeholder="Search..."
+                    onkeypress="if(event.key==='Enter') searchDict()">
+                <button class="btn btn-blue" style="max-width: 80px;" onclick="searchDict()">Search</button>
+            </div>
+            <div id="dict-results"></div>
+        </div>
+
+        <!-- 4. LIBRARY & NODES -->
+        <div id="view-deck" class="view">
+            <div class="library-layout">
+                <div class="sidebar">
+                    <h4 style="margin-top:0">Nodes / Groups</h4>
+                    <div id="group-list"></div>
+                    <hr style="border-color: var(--border);">
+                    <input type="text" id="new-group-name" placeholder="New Node Name..." style="font-size: 12px;">
+                    <button class="btn btn-blue" style="width:100%" onclick="addGroup()">+ Create Node</button>
+                </div>
+
+                <div class="main-content">
+                    <div
+                        style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+                        <h3 id="current-group-title" style="margin:0">All Words</h3>
+
+                        <div style="display: flex; gap: 5px; flex-wrap: wrap; align-items: center;">
+                            <button class="btn btn-green" onclick="openManualAdd()">➕ Add Custom</button>
+                            <button class="btn btn-blue" onclick="window.open('galaxy.html', '_blank')"
+                                style="background: #8e44ad;">🌌 Map</button>
+                            <button class="btn btn-blue" onclick="exportData()" title="Save Backup">💾 Export</button>
+                            <button class="btn btn-blue" onclick="document.getElementById('importFile').click()"
+                                title="Load List">📂 Import</button>
+                            <input type="file" id="importFile" class="hidden" accept=".json"
+                                onchange="importData(event)">
+
+                            <div style="width: 1px; height: 20px; background: var(--border); margin: 0 5px;"></div>
+
+                            <button class="btn btn-blue" onclick="printTianzige()">🖨️ Print</button>
+                            <select id="bulk-move-target" style="margin:0; font-size: 12px; width: 100px;"></select>
+                            <button class="btn btn-orange" onclick="moveSelectedToGroup()">Move</button>
+                            <button class="btn btn-red" onclick="deleteSelectedWords()" style="margin-left: 5px;">🗑️
+                                Delete</button>
+                        </div>
+                    </div>
+
+                    <table id="word-table">
+                        <thead>
+                            <tr>
+                                <th><input type="checkbox" id="master-check" onclick="toggleAllChecks(this)"></th>
+                                <th>Word</th>
+                                <th>Meaning</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="library-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 5. QUIZ -->
+        <div id="view-quiz" class="view">
+            <div class="info-card">
+                <div style="display: flex; gap: 10px; width: 100%;">
+                    <select id="quiz-source-selector"></select>
+                    <select id="quiz-mode-selector">
+                        <option value="write">Handwriting</option>
+                        <option value="choice">Multiple Choice</option>
+                    </select>
+                </div>
+                <button class="btn btn-green" style="width: 100%; margin-top:10px;" onclick="initQuiz()">🚀 Start
+                    Randomized Quiz</button>
+            </div>
+
+            <div id="quiz-area" class="hidden">
+                <div id="quiz-prog-bar" style="font-size: 12px; color: var(--subtext); margin-bottom: 10px;"></div>
+                <div class="info-card">
+                    <h2 id="quiz-q-display" style="font-family:'KaiTi'; font-size: 45px; margin:0;">?</h2>
+                    <div id="quiz-q-details">
+                        <h3 id="quiz-q-pinyin" style="margin:5px 0; color:var(--accent)"></h3>
+                        <p id="quiz-q-meaning" style="margin:0; color:var(--subtext)"></p>
+                    </div>
+                </div>
+                <div id="quiz-write-box">
+                    <div id="quiz-writing-grid"></div>
+                </div>
+                <div id="quiz-choice-box" class="hidden">
+                    <div id="quiz-options" class="mc-grid"></div>
+                </div>
+                <div class="controls">
+                    <button class="btn btn-blue" onclick="speakCurrent('quiz')">🔊 Listen</button>
+                    <button id="btn-quiz-reveal" class="btn btn-orange" onclick="revealQuiz()">Reveal Answer</button>
+                    <button id="btn-quiz-next" class="btn btn-green hidden" onclick="nextQuiz()">Next Question</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 6. GAMES / ARCADE -->
+        <div id="view-games" class="view">
+            <h2 style="border-bottom: 2px solid var(--border); padding-bottom: 10px;">Learning Arcade</h2>
+
+            <div class="mc-grid">
+                <div class="info-card" style="text-align: left; border-left: 5px solid #00ff7f;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <h3 style="margin:0; color:var(--primary)">🐍 Mandarin Snake</h3>
+                        <span style="font-size:20px;">⭐⭐⭐</span>
+                    </div>
+                    <p style="color:var(--subtext)">Navigate the snake to eat the correct characters. Don't hit the
+                        walls!</p>
+                    <button class="btn btn-green" style="width:100%; font-size: 16px; padding: 12px;"
+                        onclick="window.open('snake.html', '_blank')">▶ Launch Game</button>
+                </div>
+
+                <div class="info-card" style="text-align: left; border-left: 5px solid #f39c12;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <h3 style="margin:0; color:var(--primary)">🀄 Bamboo Match</h3>
+                        <span style="font-size:20px;">🧩</span>
+                    </div>
+                    <p style="color:var(--subtext)">Flip tiles to match the Chinese character with its meaning.</p>
+                    <button class="btn btn-orange" style="width:100%; font-size: 16px; padding: 12px;"
+                        onclick="window.open('memory.html', '_blank')">▶ Play Memory</button>
+                </div>
+
+                <div class="info-card" style="text-align: left; border-left: 5px solid #ff00ff;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <h3 style="margin:0; color:var(--primary)">💿 Zen Mode</h3>
+                        <span style="font-size:20px;">🧘</span>
+                    </div>
+                    <p style="color:var(--subtext)">Passive learning. Watch your words bounce like a DVD logo.</p>
+                    <button class="btn"
+                        style="width:100%; background: #333; color: white; font-size: 16px; padding: 12px;"
+                        onclick="window.open('screensaver.html', '_blank')">▶ Start Screensaver</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 7. SETTINGS VIEW -->
+        <div id="view-settings" class="view">
+            <h2>⚙️ System Settings</h2>
+
+            <div class="info-card" style="text-align: left; border-left: 5px solid var(--primary);">
+                <h3 style="margin-top:0;">🎨 Appearance</h3>
+                <label style="display:block; margin-bottom:10px; color:var(--subtext);">Select App Theme:</label>
+                <select id="setting-theme" onchange="changeTheme(this.value)"
+                    style="width:100%; padding:10px; font-size:16px;">
+                    <option value="light">☀️ Light Mode</option>
+                    <option value="dark">🌙 Dark Mode</option>
+                    <option value="midnight">🌌 Midnight</option>
+                    <option value="sepia">📜 Sepia Paper</option>
+                    <option value="forest">🌲 Forest Green</option>
+                </select>
+            </div>
+
+            <!-- AUDIO SETTINGS CARD -->
+            <div class="info-card" style="text-align: left; border-left: 5px solid #9b59b6;">
+                <h3 style="margin-top:0;">🎧 Background Audio</h3>
+
+                <label style="display:block; margin-bottom:5px; color:var(--subtext);">Select Track:</label>
+                <select id="music-select" onchange="changeTrack(this.value)"
+                    style="width:100%; padding:10px; font-size:16px; margin-bottom:10px;">
+                    <option value="bg1">🎵 Track 1 (Chill)</option>
+                    <option value="bg2">🎵 Track 2 (Vibe)</option>
+                    <option value="none">🔇 No Music</option>
+                </select>
+
+                <div style="display:flex; gap:10px; align-items:center;">
+                    <button id="btn-music-toggle" class="btn"
+                        style="background:#9b59b6; width:100%; font-size:16px; padding:10px;" onclick="toggleMusic()">▶
+                        Play Music</button>
+                    <input type="range" min="0" max="1" step="0.1" value="0.5" onchange="setVolume(this.value)"
+                        style="width: 100px;">
+                </div>
+            </div>
+
+            <div class="info-card" style="text-align: left; border-left: 5px solid var(--danger);">
+                <h3 style="margin-top:0;">🗑️ Data Management</h3>
+                <p style="color:var(--subtext);">Danger Zone. Be careful here.</p>
+                <button class="btn btn-red"
+                    onclick="if(confirm('Are you sure you want to delete EVERYTHING? This cannot be undone.')) { localStorage.clear(); location.reload(); }">⚠️
+                    Factory Reset App</button>
+            </div>
+
+            <div style="text-align:center; margin-top:30px; color:var(--subtext); font-size:12px;">
+                Mandarin OS v2.0 • Built by You & AI
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Floating Stroke Helper -->
+    <div id="stroke-helper">
+        <div style="display:flex; justify-content: space-between; margin-bottom:5px;">
+            <small id="stroke-title"></small>
+            <button onclick="document.getElementById('stroke-helper').style.display='none'"
+                style="border:none; background:none; cursor:pointer; font-size:20px;">×</button>
+        </div>
+        <div id="hanzi-target"></div>
+    </div>
+
+    <script>
+
+        // --- MENU LOGIC ---
+        function toggleMenu() {
+            document.getElementById('side-menu').classList.toggle('open');
+            const bd = document.getElementById('menu-backdrop');
+            if (bd.style.display === 'block') {
+                bd.style.opacity = 0;
+                setTimeout(() => bd.style.display = 'none', 300);
+            } else {
+                bd.style.display = 'block';
+                setTimeout(() => bd.style.opacity = 1, 10);
+            }
+        }
+
+        function menuGo(view) {
+            toggleMenu(); // Close menu
+            switchView(view); // Go to page
+
+            // Update active state in menu
+            document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
+            const activeLink = document.getElementById('link-' + view);
+            if (activeLink) activeLink.classList.add('active');
+        }
+
+        const radicalData = {
+            // GREETINGS & BASICS
+            "你": "亻 (Person) + 尔",
+            "好": "女 (Woman) + 子 (Child)",
+            "谢": "讠 (Speech) + 射",
+            "客": "宀 (Roof) + 各",
+            "气": "气 (Steam/Air)",
+            "对": "又 (Right hand) + 寸 (Inch)",
+            "不": "一 (One) + 个",
+            "起": "走 (Walk) + 己 (Self)",
+            "没": "氵 (Water) + 殳",
+            "关": "丷 (Eight/Divide) + 天 (Sky)",
+            "系": "丿 + 糸 (Silk)",
+            "再": "一 (One) + 冉",
+            "见": "见 (See/Look)",
+            "早": "日 (Sun) + 十",
+            "安": "宀 (Roof) + 女 (Woman)",
+            "吗": "口 (Mouth) + 马 (Horse)",
+            "很": "彳 (Step) + 艮",
+            "呢": "口 (Mouth) + 尼",
+
+            // PEOPLE
+            "我": "戈 (Spear) + 手 (Hand)",
+            "他": "亻 (Person) + 也",
+            "她": "女 (Woman) + 也",
+            "们": "亻 (Person) + 门 (Gate)",
+            "谁": "讠 (Speech) + 隹 (Short-tailed bird)",
+            "什": "亻 (Person) + 十",
+            "么": "丿 (Slash) + 厶 (Private)",
+            "名": "夕 (Evening) + 口 (Mouth)",
+            "字": "宀 (Roof) + 子 (Child)",
+            "叫": "口 (Mouth) + 丩",
+
+            // FAMILY
+            "妈": "女 (Woman) + 马 (Horse)",
+            "爸": "父 (Father) + 巴",
+            "哥": "可 + 可 (Double 'Able')",
+            "弟": "丷 + 弓 (Bow) + 丨",
+            "姐": "女 (Woman) + 且",
+            "妹": "女 (Woman) + 未",
+            "家": "宀 (Roof) + 豕 (Pig - ancient sign of wealth)",
+
+            // FOOD & DRINK
+            "吃": "口 (Mouth) + 乞 (Beg)",
+            "喝": "口 (Mouth) + 曷",
+            "水": "水 (Water)",
+            "茶": "艹 (Grass) + 余",
+            "咖": "口 (Mouth) + 加",
+            "啡": "口 (Mouth) + 非",
+            "米": "米 (Rice)",
+            "饭": "饣 (Food) + 反",
+            "面": "面 (Face)",
+            "渴": "氵 (Water) + 曷",
+            "饿": "饣 (Food) + 我",
+
+            // TIME & NUMBERS
+            "今": "人 (Person) + 乛",
+            "明": "日 (Sun) + 月 (Moon)",
+            "昨": "日 (Sun) + 乍",
+            "天": "大 (Big) + 一 (One)",
+            "年": "丿 + 干",
+            "月": "月 (Moon)",
+            "日": "日 (Sun)",
+            "现": "王 (Jade) + 见 (See)",
+            "在": "土 (Earth) + 𠂇",
+            "点": "占 + 灬 (Fire)",
+            "分": "八 (Divide) + 刀 (Knife)",
+            "一": "一 (One)",
+            "二": "二 (Two)",
+            "三": "三 (Three)",
+            "四": "囗 (Border) + 儿",
+            "五": "二 + 乂",
+            "六": "亠 (Lid) + 八",
+            "七": "七 (Seven)",
+            "八": "八 (Eight)",
+            "九": "九 (Nine)",
+            "十": "十 (Ten)",
+
+            // PLACES & THINGS
+            "学": "宀 (Roof) + 子 (Child)",
+            "校": "木 (Wood) + 交",
+            "医": "匚 (Box) + 矢 (Arrow)",
+            "院": "阝 (Mound) + 完",
+            "馆": "饣 (Food) + 官",
+            "店": "广 (Shelter) + 占",
+            "商": "亠 + 冂 + 口",
+            "校": "木 (Wood) + 交",
+            "洗": "氵 (Water) + 先",
+            "手": "手 (Hand)",
+            "间": "门 (Gate) + 日 (Sun)",
+            "国": "囗 (Enclosure) + 玉 (Jade)",
+            "美": "羊 (Goat) + 大 (Big)",
+
+            // ACTIONS & MISC
+            "看": "手 (Hand) + 目 (Eye - hand over eye to see)",
+            "听": "口 (Mouth) + 斤 (Axe)",
+            "说": "讠 (Speech) + 兑",
+            "语": "讠 (Speech) + 五 + 口",
+            "话": "讠 (Speech) + 舌 (Tongue)",
+            "买": "乛 + 头 (Head)",
+            "卖": "十 + 买 (Ten plus Buy = Sell)",
+            "钱": "钅 (Metal) + 戋",
+            "懂": "忄 (Heart) + 董",
+            "想": "木 + 目 (Eye) + 心 (Heart)",
+            "要": "覀 + 女 (Woman)",
+            "去": "土 (Earth) + 厶",
+            "来": "木 (Tree) + 丷",
+            "做": "亻 (Person) + 故",
+            "有": "𠂇 + 月 (Moon)",
+            "是": "日 (Sun) + 疋",
+            "多": "夕 + 夕 (Double Evening = Many)",
+            "少": "小 (Small) + 丿",
+            "太": "大 (Big) + 丶 (Dot)",
+            "贵": "贝 (Shell - ancient money) + 中",
+            "便": "亻 (Person) + 更",
+            "宜": "宀 (Roof) + 且",
+            "趣": "走 (Walk) + 取",
+            "忙": "忄 (Heart) + 亡 (Death/Gone)",
+            "累": "田 (Field) + 系 (Silk)",
+            "快": "忄 (Heart) + 夬",
+            "乐": "丿 + 𠃑 + 木 (Wood)",
+            "这": "辶 (Walk) + 文 (Culture)",
+            "那": "耳 (Ear) + 阝 (Mound)",
+            "几": "几 (Table/Small amount)"
+        };
+
+        // --- DATA ---
+        let db = JSON.parse(localStorage.getItem('mandarinFinalSuite_V12')) || {
+            words: [{ id: 1, char: "你好", pinyin: "nǐ hǎo", meaning: "Hello" }],
+            groups: [{ id: 0, name: "Main", wordIds: [1] }]
+        };
+        let activeGroupId = null, studyList = [], studyIdx = 0, quizList = [], quizIdx = 0, canvases = [];
+
+        // --- UTILS ---
+        function shuffle(array) {
+            let cur = array.length, rand;
+            while (cur != 0) {
+                rand = Math.floor(Math.random() * cur); cur--;
+                [array[cur], array[rand]] = [array[rand], array[cur]];
+            }
+            return array;
+        }
+        function save() { localStorage.setItem('mandarinFinalSuite_V12', JSON.stringify(db)); }
+        function getInk() { return getComputedStyle(document.body).getPropertyValue('--ink').trim(); }
+
+        // --- THEME ---
+        function changeTheme(t) {
+            document.body.className = 'theme-' + t;
+            localStorage.setItem('mandarinAppTheme', t);
+
+            // Sync the selector in the Settings page if it exists
+            const sel = document.getElementById('setting-theme');
+            if (sel) sel.value = t;
+        }
+        // --- NAVIGATION ---
+        // --- NAVIGATION (UPDATED) ---
+        function switchView(v) {
+            // 1. Hide all views
+            document.querySelectorAll('.view').forEach(e => e.classList.remove('active'));
+            document.querySelectorAll('nav button').forEach(e => e.classList.remove('active')); // For old nav if exists
+
+            // 2. Show the selected view
+            const view = document.getElementById(`view-${v}`);
+            if (view) view.classList.add('active');
+
+            // 3. FORCE RE-RENDER (The Fix)
+            // We reload data to ensure we see changes made in other tabs (like Flashcards)
+            const local = localStorage.getItem('mandarinFinalSuite_V12');
+            if (local) db = JSON.parse(local);
+
+            if (v === 'dashboard') initDashboard();
+            if (v === 'study') { updateSelectors(); initStudy(); }
+
+            // THIS IS THE MISSING PART THAT FIXES YOUR LIBRARY:
+            if (v === 'deck') {
+                renderLibrary();
+            }
+
+            if (v === 'quiz') { updateSelectors(); document.getElementById('quiz-area').classList.add('hidden'); }
+        }
+
+        // --- AUDIO & STROKES ---
+        function speakCurrent(mode) {
+            const item = mode === 'study' ? studyList[studyIdx] : quizList[quizIdx];
+            if (!item) return;
+            const msg = new SpeechSynthesisUtterance(item.char);
+            msg.lang = 'zh-CN'; window.speechSynthesis.speak(msg);
+        }
+
+        function showStrokeOrder() {
+            const item = studyList[studyIdx]; if (!item) return;
+            const helper = document.getElementById('stroke-helper');
+            helper.style.display = 'block';
+            document.getElementById('hanzi-target').innerHTML = '';
+            document.getElementById('stroke-title').innerText = item.char;
+            [...item.char].forEach(c => {
+                if (/[\u4e00-\u9fa5]/.test(c)) {
+                    const d = document.createElement('div');
+                    document.getElementById('hanzi-target').appendChild(d);
+                    const w = HanziWriter.create(d, c, { width: 100, height: 100, padding: 5, strokeColor: '#b8351f' });
+                    w.animateCharacter();
+                }
+            });
+        }
+
+        function showRadicals() {
+            const item = studyList[studyIdx];
+            if (!item) return;
+
+            let output = "";
+            let found = false;
+
+            // Build the list of characters
+            [...item.char].forEach(c => {
+                if (radicalData[c]) {
+                    output += `<div style="margin-bottom:12px;"><b style="font-size:24px; font-family:KaiTi; color:var(--primary)">${c}</b>: ${radicalData[c]}</div>`;
+                    found = true;
+                } else if (/[\u4e00-\u9fa5]/.test(c)) {
+                    output += `<div style="margin-bottom:12px;"><b style="font-size:24px; font-family:KaiTi; color:var(--primary)">${c}</b>: <span style="color:var(--subtext); font-style:italic;">Component data coming soon...</span></div>`;
+                }
+            });
+
+            const modal = document.getElementById('radical-modal');
+            const content = document.getElementById('radical-content');
+
+            if (!found) {
+                content.innerHTML = `<p>No specific radical data for <b>${item.char}</b> yet.</p><p style="font-size:14px; color:var(--subtext)">Try searching for this word in the 🔍 Dictionary to learn more!</p>`;
+            } else {
+                content.innerHTML = output;
+            }
+
+            // Use .style.display to override the initial 'none'
+            modal.style.display = 'flex';
+        }
+
+        function closeRadicalModal() {
+            // Set display back to 'none' to hide it
+            document.getElementById('radical-modal').style.display = 'none';
+        }
+
+        // --- LIBRARY & GROUPS ---
+        function renderLibrary() {
+            const gList = document.getElementById('group-list');
+            gList.innerHTML = `<div class="group-item ${activeGroupId === null ? 'active' : ''}" onclick="filterByGroup(null)">📁 All Words <span class="badge">${db.words.length}</span></div>`;
+            db.groups.forEach(g => {
+                gList.innerHTML += `
+                <div class="group-item ${activeGroupId === g.id ? 'active' : ''}" onclick="filterByGroup(${g.id})">
+                    <span>📁 ${g.name} <span class="badge">${g.wordIds.length}</span></span>
+                    <span style="color:var(--danger); cursor:pointer; font-weight:bold" onclick="deleteGroup(event, ${g.id})">×</span>
+                </div>`;
+            });
+            const tbody = document.getElementById('library-tbody');
+            let words = activeGroupId === null ? db.words : db.words.filter(w => db.groups.find(g => g.id === activeGroupId).wordIds.includes(w.id));
+            tbody.innerHTML = words.map(w => `<tr><td><input type="checkbox" class="word-check" data-id="${w.id}"></td><td style="font-family:KaiTi; font-size:20px">${w.char}</td><td>${w.meaning}</td><td><button class="btn btn-red" style="padding:4px" onclick="deleteWord(${w.id})">🗑️</button></td></tr>`).join('');
+            updateSelectors();
+        }
+        function filterByGroup(id) { activeGroupId = id; renderLibrary(); }
+        function addGroup() { const n = document.getElementById('new-group-name').value; if (!n) return; db.groups.push({ id: Date.now(), name: n, wordIds: [] }); document.getElementById('new-group-name').value = ''; save(); renderLibrary(); }
+        function deleteGroup(e, id) {
+            e.stopPropagation(); const g = db.groups.find(x => x.id === id);
+            if (g.wordIds.length > 0) return alert("Node must be empty first!");
+            if (confirm("Delete node?")) { db.groups = db.groups.filter(x => x.id !== id); if (activeGroupId === id) activeGroupId = null; save(); renderLibrary(); }
+        }
+        function moveSelectedToGroup() {
+            const tid = parseInt(document.getElementById('bulk-move-target').value); if (isNaN(tid)) return alert("Select a Node.");
+            const sids = Array.from(document.querySelectorAll('.word-check:checked')).map(cb => parseInt(cb.dataset.id));
+            if (!sids.length) return alert("No words selected.");
+            db.groups.forEach(g => g.wordIds = g.wordIds.filter(id => !sids.includes(id)));
+            db.groups.find(g => g.id === tid).wordIds.push(...sids);
+            save(); renderLibrary();
+        }
+        function deleteWord(id) { if (confirm("Delete permanently?")) { db.words = db.words.filter(w => w.id !== id); db.groups.forEach(g => g.wordIds = g.wordIds.filter(x => x !== id)); save(); renderLibrary(); } }
+        function toggleAllChecks(m) { document.querySelectorAll('.word-check').forEach(c => c.checked = m.checked); }
+
+        // --- PRINTING ---
+        function printTianzige() {
+            const sids = Array.from(document.querySelectorAll('.word-check:checked')).map(cb => parseInt(cb.dataset.id));
+            if (!sids.length) return alert("Select words in Library first!");
+            const words = db.words.filter(w => sids.includes(w.id));
+            const win = window.open('', '_blank');
+            win.document.write('<html><head><style>.box{border:1px solid #ccc; width:60px; height:60px; display:inline-flex; align-items:center; justify-content:center; font-size:40px; color:#ddd; font-family:KaiTi; margin:2px;}</style></head><body>');
+            words.forEach(w => {
+                win.document.write(`<p><strong>${w.char}</strong> (${w.pinyin})</p>`);
+                [...w.char].forEach(c => { for (let i = 0; i < 10; i++) win.document.write(`<div class="box">${i < 1 ? c : ''}</div>`); });
+            });
+            win.document.write('</body></html>'); win.document.close(); win.print();
+        }
+
+        // --- STUDY & QUIZ ---
+        function initStudy() {
+            const s = document.getElementById('study-selector').value;
+            if (s === 'all') studyList = [...db.words];
+            else if (s.startsWith('g_')) { const gid = parseInt(s.split('_')[1]); studyList = db.words.filter(w => db.groups.find(g => g.id === gid).wordIds.includes(w.id)); }
+            studyIdx = 0; renderStudy();
+        }
+        function shuffleStudy() { studyList = shuffle([...studyList]); studyIdx = 0; renderStudy(); }
+        function renderStudy() {
+            const g = document.getElementById('writing-grid'); g.innerHTML = ''; canvases = [];
+            const item = studyList[studyIdx]; if (!item) { document.getElementById('study-char').innerText = "Empty"; return; }
+            document.getElementById('study-char').innerText = item.char;
+            document.getElementById('study-pinyin').innerText = item.pinyin;
+            document.getElementById('study-meaning').innerText = item.meaning;
+            [...item.char].forEach(c => { if (/[\u4e00-\u9fa5]/.test(c)) createBox(g, c, false); });
+        }
+        function nextCard() { logActivity(); studyIdx = (studyIdx + 1) % studyList.length; renderStudy(); }
+        function prevCard() { studyIdx = (studyIdx - 1 + studyList.length) % studyList.length; renderStudy(); }
+
+        function initQuiz() {
+            const s = document.getElementById('quiz-source-selector').value;
+            let base = [];
+            if (s === 'all') base = [...db.words];
+            else if (s.startsWith('g_')) { const gid = parseInt(s.split('_')[1]); base = db.words.filter(w => db.groups.find(g => g.id === gid).wordIds.includes(w.id)); }
+            if (!base.length) return alert("No words.");
+            quizList = shuffle([...base]); quizIdx = 0;
+            document.getElementById('quiz-area').classList.remove('hidden'); renderQuiz();
+        }
+        function renderQuiz() {
+            const item = quizList[quizIdx], mode = document.getElementById('quiz-mode-selector').value;
+            document.getElementById('quiz-prog-bar').innerText = `Word ${quizIdx + 1}/${quizList.length}`;
+            document.getElementById('btn-quiz-next').classList.add('hidden');
+            document.getElementById('btn-quiz-reveal').classList.toggle('hidden', mode === 'choice');
+            document.getElementById('quiz-write-box').classList.toggle('hidden', mode !== 'write');
+            document.getElementById('quiz-choice-box').classList.toggle('hidden', mode !== 'choice');
+            if (mode === 'write') {
+                document.getElementById('quiz-q-display').innerText = "?";
+                document.getElementById('quiz-q-pinyin').innerText = item.pinyin;
+                document.getElementById('quiz-q-meaning').innerText = item.meaning;
+                const g = document.getElementById('quiz-writing-grid'); g.innerHTML = ''; canvases = [];
+                [...item.char].forEach(c => { if (/[\u4e00-\u9fa5]/.test(c)) createBox(g, c, true); });
+            } else {
+                document.getElementById('quiz-q-display').innerText = item.char;
+                const o = document.getElementById('quiz-options'); o.innerHTML = '';
+                let pool = db.words.filter(i => i.id !== item.id);
+                let choices = shuffle([...shuffle(pool).slice(0, 3), item]);
+                choices.forEach(c => {
+                    const b = document.createElement('button'); b.className = 'mc-btn'; b.innerHTML = `${c.pinyin}<br>${c.meaning}`;
+                    b.onclick = () => { if (c.id === item.id) b.classList.add('correct'); else b.classList.add('wrong'); document.getElementById('btn-quiz-next').classList.remove('hidden'); };
+                    o.appendChild(b);
+                });
+            }
+        }
+        function revealQuiz() { document.getElementById('quiz-q-display').innerText = quizList[quizIdx].char; document.querySelectorAll('.ghost-char').forEach(e => e.classList.remove('ghost-hidden')); document.getElementById('btn-quiz-reveal').classList.add('hidden'); document.getElementById('btn-quiz-next').classList.remove('hidden'); }
+        function nextQuiz() { logActivity(); quizIdx++; if (quizIdx < quizList.length) renderQuiz(); else { alert("Done!"); document.getElementById('quiz-area').classList.add('hidden'); } }
+
+        // --- DICTIONARY SECTION ---
+
+        // 1. THE NEW SEARCH FUNCTION
+        // --- ROBUST DICTIONARY (Double-Bounce Method) ---
+        // --- DICTIONARY WITH AUDIO ---
+        async function searchDict() {
+            const input = document.getElementById('dict-input').value.trim();
+            if (!input) return;
+
+            const resBox = document.getElementById('dict-results');
+            resBox.innerHTML = '<div style="padding:20px; text-align:center; color:var(--subtext);">Consulting the archives... 📜</div>';
+
+            try {
+                let hanzi = "";
+                let definitions = [];
+
+                // 1. DETERMINE INPUT TYPE
+                const isChinese = /[\u4e00-\u9fa5]/.test(input);
+
+                if (isChinese) {
+                    hanzi = input;
+                    const r = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(input)}&langpair=zh-CN|en`);
+                    const d = await r.json();
+
+                    if (d.matches) {
+                        d.matches.forEach(m => {
+                            if (m.translation && m.quality > 0) definitions.push(m.translation);
+                        });
+                    } else {
+                        definitions.push(d.responseData.translatedText);
+                    }
+
+                } else {
+                    const r1 = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(input)}&langpair=en|zh-CN`);
+                    const d1 = await r1.json();
+                    hanzi = d1.responseData.translatedText;
+
+                    if (!/[\u4e00-\u9fa5]/.test(hanzi)) throw new Error("No Chinese found.");
+
+                    const r2 = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(hanzi)}&langpair=zh-CN|en`);
+                    const d2 = await r2.json();
+
+                    definitions.push(input);
+                    if (d2.matches) {
+                        d2.matches.forEach(m => {
+                            if (m.translation && m.quality > 0 && m.translation.toLowerCase() !== input.toLowerCase()) {
+                                definitions.push(m.translation);
+                            }
+                        });
+                    }
+                }
+
+                // 2. DATA PREP
+                const pinyin = (typeof pinyinPro !== 'undefined') ? pinyinPro.pinyin(hanzi) : "Loading...";
+                const uniqueDefs = [...new Set(definitions)].slice(0, 5);
+                const defHtml = uniqueDefs.map(d => `<li>${d}</li>`).join('');
+                const mainMean = uniqueDefs[0] || "Unknown";
+
+                // 3. DROPDOWN
+                let groupOptions = `<option value="">📂 (Uncategorized)</option>`;
+                db.groups.forEach(g => {
+                    groupOptions += `<option value="${g.id}">📂 ${g.name}</option>`;
+                });
+
+                // 4. RENDER CARD (Now with Audio Button!)
+                resBox.innerHTML = `
+                <div class="info-card" style="text-align:left; border-left: 5px solid var(--accent); margin-bottom:15px;">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                        <div>
+                            <div style="display:flex; align-items:center; gap:10px;">
+                                <h2 style="margin:0; font-family:'KaiTi'; font-size: 36px; color:var(--primary);">${hanzi}</h2>
+                                <button class="btn btn-blue" style="padding: 5px 10px; font-size:16px;" onclick="speakDict('${hanzi}')">🔊</button>
+                            </div>
+                            <p style="margin:5px 0; color:var(--accent); font-weight:bold; font-size:18px;">${pinyin}</p>
+                        </div>
+                    </div>
+                    
+                    <hr style="border:0; border-top:1px solid var(--border); margin:10px 0;">
+                    
+                    <div style="font-size:12px; color:var(--subtext); margin-bottom:5px;">Definitions:</div>
+                    <ul style="padding-left: 20px; margin: 5px 0; color:var(--text); font-size:14px; line-height:1.4;">
+                        ${defHtml}
+                    </ul>
+                    
+                    <div style="background:var(--bg); padding:10px; border-radius:8px; margin-top:15px;">
+                        <label style="font-size:12px; color:var(--subtext);">Save to Node:</label>
+                        <div style="display:flex; gap:10px; margin-top:5px;">
+                            <select id="dict-save-select" style="margin:0;">${groupOptions}</select>
+                            <button class="btn btn-green" onclick="addToLibraryFromDict('${hanzi}', '${pinyin.replace(/'/g, "\\'")}', '${mainMean.replace(/'/g, "\\'").replace(/"/g, "&quot;")}')">
+                                + Save Word
+                            </button>
+                        </div>
+                    </div>
+                </div>`;
+
+            } catch (e) {
+                console.error(e);
+                resBox.innerHTML = `<div class="info-card" style="color:var(--danger);">Search Failed. Check internet.</div>`;
+            }
+        }
+
+        // New Helper function for Dictionary Audio
+        function speakDict(text) {
+            const u = new SpeechSynthesisUtterance(text);
+            u.lang = 'zh-CN';
+            window.speechSynthesis.speak(u);
+        }
+        // Helper Function
+        function addToLibraryFromDict(char, pinyin, meaning) {
+            const selectBox = document.getElementById('dict-save-select');
+            const targetGroupId = selectBox ? parseInt(selectBox.value) : null;
+
+            const newID = Date.now();
+            const newWord = { id: newID, char: char, pinyin: pinyin, meaning: meaning };
+
+            db.words.push(newWord);
+
+            if (targetGroupId && !isNaN(targetGroupId)) {
+                const group = db.groups.find(g => g.id === targetGroupId);
+                if (group) group.wordIds.push(newID);
+            }
+
+            save();
+            renderLibrary();
+            alert(`✅ Saved "${char}" to your library!`);
+        }
+
+        // --- DRAWING ---
+        function createBox(container, char, isQuiz) {
+            const box = document.createElement('div'); box.className = 'char-box';
+            const ghost = document.createElement('div'); ghost.className = 'ghost-char' + (isQuiz ? ' ghost-hidden' : ''); ghost.innerText = char;
+            const canvas = document.createElement('canvas'); canvas.width = 130; canvas.height = 130;
+            box.append(ghost, canvas); container.appendChild(box);
+            const ctx = canvas.getContext('2d'); canvases.push(ctx);
+            let drawing = false;
+            const fn = (e) => {
+                if (!drawing) return;
+                if (document.getElementById('fade-mode').checked) ghost.style.opacity = '0';
+                const r = canvas.getBoundingClientRect();
+                const x = (e.clientX || e.touches[0].clientX) - r.left; const y = (e.clientY || e.touches[0].clientY) - r.top;
+                ctx.lineWidth = 5; ctx.lineCap = 'round'; ctx.strokeStyle = getInk();
+                ctx.lineTo(x, y); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x, y);
+            };
+            canvas.addEventListener('mousedown', (e) => { drawing = true; ctx.beginPath(); fn(e); });
+            canvas.addEventListener('mousemove', fn); window.addEventListener('mouseup', () => drawing = false);
+            canvas.addEventListener('touchstart', (e) => { e.preventDefault(); drawing = true; ctx.beginPath(); fn(e); });
+            canvas.addEventListener('touchmove', fn);
+        }
+        function clearAllCanvases() { canvases.forEach(c => c.clearRect(0, 0, 130, 130)); document.querySelectorAll('.ghost-char').forEach(g => g.style.opacity = '0.15'); }
+
+        // --- SELECTORS & IMPORT ---
+        function updateSelectors() {
+            const sels = ['study-selector', 'quiz-source-selector', 'bulk-move-target', 'trans-group-target'];
+            sels.forEach(id => {
+                const el = document.getElementById(id); if (!el) return;
+                el.innerHTML = '<option value="all">All Words</option>';
+                db.groups.forEach(g => el.innerHTML += `<option value="${id.includes('target') || id.includes('move') ? g.id : 'g_' + g.id}">${g.name}</option>`);
+            });
+        }
+
+        function exportData() {
+            const dl = document.createElement('a'); dl.setAttribute("href", "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(db)));
+            dl.setAttribute("download", "mandarin_full_db.json"); dl.click();
+        }
+
+        // --- MANUAL ADD FUNCTIONS ---
+        function openManualAdd() {
+            // 1. Clear previous inputs
+            document.getElementById('manual-char').value = '';
+            document.getElementById('manual-pinyin').value = '';
+            document.getElementById('manual-mean').value = '';
+
+            // 2. Populate the Group Selector
+            const sel = document.getElementById('manual-group-select');
+            sel.innerHTML = '<option value="">📂 (Uncategorized)</option>';
+            db.groups.forEach(g => {
+                sel.innerHTML += `<option value="${g.id}">📂 ${g.name}</option>`;
+            });
+
+            // 3. Show Modal
+            document.getElementById('manual-add-modal').style.display = 'flex';
+        }
+
+        function saveManualWord() {
+            // 1. Get Values
+            const c = document.getElementById('manual-char').value.trim();
+            const p = document.getElementById('manual-pinyin').value.trim();
+            const m = document.getElementById('manual-mean').value.trim();
+            const gid = parseInt(document.getElementById('manual-group-select').value);
+
+            // 2. Validation
+            if (!c || !m) return alert("Character and Meaning are required!");
+
+            // 3. Add to DB
+            const newID = Date.now();
+            db.words.push({ id: newID, char: c, pinyin: p, meaning: m });
+
+            // 4. Add to Group (if selected)
+            if (!isNaN(gid)) {
+                const group = db.groups.find(g => g.id === gid);
+                if (group) group.wordIds.push(newID);
+            }
+
+            // 5. Save & Close
+            save();
+            renderLibrary();
+            document.getElementById('manual-add-modal').style.display = 'none';
+            alert("Word Added!");
+        }
+
+        function importData(e) {
+            const file = e.target.files[0]; const reader = new FileReader();
+            reader.onload = (ev) => {
+                try {
+                    const data = JSON.parse(ev.target.result);
+                    if (data.words && data.groups) { db = data; alert("Full DB imported!"); }
+                    else if (Array.isArray(data)) {
+                        const nid = Date.now(); const nids = [];
+                        data.forEach(i => { const id = Math.floor(Math.random() * 1000000); db.words.push({ id, ...i }); nids.push(id); });
+                        db.groups.push({ id: nid, name: "Imported Node", wordIds: nids });
+                        alert(`Imported ${data.length} items!`);
+                    }
+                    save(); renderLibrary();
+                } catch (err) { alert("Failed."); }
+            };
+            reader.readAsText(file);
+        }
+
+
+        function deleteSelectedWords() {
+            // 1. Find all checked boxes
+            const checked = document.querySelectorAll('.word-check:checked');
+            if (checked.length === 0) return alert("No words selected.");
+
+            // 2. Ask for confirmation (Safety First!)
+            if (!confirm(`⚠️ Are you sure you want to delete ${checked.length} words permanently? This cannot be undone.`)) return;
+
+            // 3. Get the IDs of words to delete
+            const idsToDelete = Array.from(checked).map(cb => parseInt(cb.dataset.id));
+
+            // 4. Remove them from the main list
+            db.words = db.words.filter(w => !idsToDelete.includes(w.id));
+
+            // 5. Remove them from all Groups/Folders as well
+            db.groups.forEach(g => {
+                g.wordIds = g.wordIds.filter(id => !idsToDelete.includes(id));
+            });
+
+            // 6. Save and Refresh
+            save();
+            renderLibrary();
+
+            // Optional: Uncheck the master checkbox
+            document.getElementById('master-check').checked = false;
+        }
+
+        // --- ANIMATED BACKGROUND ---
+        const bgCanvas = document.getElementById('bg-animation');
+        const bgCtx = bgCanvas.getContext('2d');
+        let particles = [];
+
+        function resizeBg() {
+            bgCanvas.width = window.innerWidth;
+            bgCanvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeBg);
+        resizeBg();
+
+        class Particle {
+            constructor() {
+                this.reset();
+                this.y = Math.random() * bgCanvas.height; // Start randomly on screen
+            }
+            reset() {
+                this.x = Math.random() * bgCanvas.width;
+                this.y = bgCanvas.height + 50;
+                this.size = Math.random() * 20 + 10;
+                this.speed = Math.random() * 0.5 + 0.2;
+                this.opacity = Math.random() * 0.1 + 0.05;
+                this.char = getRandomChar();
+            }
+            update() {
+                this.y -= this.speed;
+                if (this.y < -50) this.reset();
+            }
+            draw() {
+                // CHANGED: Use '--text' instead of '--primary' so it glows white in dark mode
+                // ADDED: .trim() to make sure the color code is clean
+                bgCtx.fillStyle = getComputedStyle(document.body).getPropertyValue('--text').trim();
+
+                bgCtx.globalAlpha = this.opacity;
+                bgCtx.font = `${this.size}px "KaiTi"`;
+                bgCtx.fillText(this.char, this.x, this.y);
+                bgCtx.globalAlpha = 1.0;
+            }
+        }
+
+        function getRandomChar() {
+            // Pick a random char from your DB, or use a default if DB is empty
+            if (db.words.length > 0) {
+                return db.words[Math.floor(Math.random() * db.words.length)].char.charAt(0);
+            }
+            return ["爱", "水", "火", "气", "中", "人"][Math.floor(Math.random() * 6)];
+        }
+
+        function initBg() {
+            particles = [];
+            // Create 30 floating characters
+            for (let i = 0; i < 30; i++) particles.push(new Particle());
+            animateBg();
+        }
+
+        function animateBg() {
+            bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
+            particles.forEach(p => {
+                p.update();
+                p.draw();
+            });
+            requestAnimationFrame(animateBg);
+        }
+
+        // Start it up!
+
+
+        // --- DASHBOARD LOGIC ---
+
+        // 1. Initialize Dashboard
+        function initDashboard() {
+            // 1. RELOAD DATA (Crucial for syncing with Flashcards app)
+            const local = localStorage.getItem('mandarinFinalSuite_V12');
+            if (local) db = JSON.parse(local);
+
+            // Ensure log exists
+            if (!db.activityLog) db.activityLog = {};
+
+            const todayKey = new Date().toISOString().split('T')[0];
+
+            // Update Stats
+            document.getElementById('stat-total').innerText = db.words.length;
+            document.getElementById('stat-today').innerText = db.activityLog[todayKey] || 0;
+
+            // Calculate Mastery (Simple rule: interval > 21 days = Mastered)
+            const masteredCount = db.words.filter(w => w.srs && w.srs.interval > 21).length;
+            const masteryPct = db.words.length > 0 ? Math.round((masteredCount / db.words.length) * 100) : 0;
+            document.getElementById('stat-mastery').innerText = masteryPct + "%";
+
+            renderHeatmap();
+            calculateStreak();
+        }
+
+        // 2. Render GitHub-style Heatmap
+        // 2. Render Calendar Year Heatmap (Jan 1 - Dec 31)
+        function renderHeatmap() {
+            const grid = document.getElementById('heatmap-grid');
+            grid.innerHTML = '';
+
+            const currentYear = new Date().getFullYear(); // e.g., 2026
+            const startDate = new Date(currentYear, 0, 1); // Jan 1st
+            const endDate = new Date(currentYear, 11, 31); // Dec 31st
+
+            // Loop through every day of the year
+            for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+                // Generate Key YYYY-MM-DD manually to avoid Timezone issues
+                const year = d.getFullYear();
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                const key = `${year}-${month}-${day}`;
+
+                const count = db.activityLog[key] || 0;
+
+                const div = document.createElement('div');
+                div.className = 'heat-box';
+                div.title = `${key}: ${count} actions`; // Hover tooltip
+
+                // Highlight TODAY with a border
+                const todayKey = new Date().toISOString().split('T')[0];
+                if (key === todayKey) {
+                    div.style.border = "1px solid #333";
+                    div.style.transform = "scale(1.2)";
+                }
+
+                // Color logic
+                if (count > 0) div.classList.add('heat-1');
+                if (count > 5) div.classList.add('heat-2');
+                if (count > 15) div.classList.add('heat-3');
+                if (count > 30) div.classList.add('heat-4');
+
+                // Grey out future days
+                if (d > new Date()) {
+                    div.style.opacity = "0.3";
+                    div.style.background = "#ddd"; // Placeholder color
+                }
+
+                grid.appendChild(div);
+            }
+        }
+
+        // 3. Calculate Streak
+        function calculateStreak() {
+            let streak = 0;
+            const today = new Date();
+            // Check yesterday first (to allow streak to continue today)
+            // Check today
+            let d = new Date();
+            let key = d.toISOString().split('T')[0];
+            if (db.activityLog[key] > 0) streak++;
+
+            // Loop backwards
+            for (let i = 1; i < 365; i++) {
+                d.setDate(today.getDate() - i);
+                key = d.toISOString().split('T')[0];
+                if (db.activityLog[key] > 0) streak++;
+                else break; // Streak broken
+            }
+            document.getElementById('streak-display').innerText = streak + " 🔥";
+        }
+
+        function calculateMastery() {
+            if (db.words.length === 0) return 0;
+            // Simple heuristic: words with study history count as 'learning'
+            // If you implement SRS fully in index.html later, use interval > 21 days
+            return 0; // Placeholder until we link SRS data here
+        }
+
+        // 4. Log Activity Helper
+        function logActivity() {
+            if (!db.activityLog) db.activityLog = {};
+            const todayKey = new Date().toISOString().split('T')[0];
+
+            if (!db.activityLog[todayKey]) db.activityLog[todayKey] = 0;
+            db.activityLog[todayKey]++;
+
+            save();
+            // Only re-render if we are looking at the dashboard
+            if (document.getElementById('view-dashboard').classList.contains('active')) {
+                initDashboard();
+            }
+        }
+
+        // --- BACKGROUND MUSIC SYSTEM ---
+        let bgAudio = new Audio();
+        bgAudio.loop = true; // Loop forever
+        let isMusicPlaying = false;
+
+        // 1. Initialize Music on Load
+        function initMusic() {
+            // Load saved settings
+            const savedTrack = localStorage.getItem('mandarinBgTrack') || 'bg1';
+            const savedVol = localStorage.getItem('mandarinBgVol') || '0.5';
+
+            // Update UI
+            const sel = document.getElementById('music-select');
+            if (sel) sel.value = savedTrack;
+
+            // Setup Player
+            if (savedTrack !== 'none') {
+                bgAudio.src = `audio/${savedTrack}.mp3`;
+                bgAudio.volume = parseFloat(savedVol);
+            }
+        }
+
+        // 2. Toggle Play/Pause
+        function toggleMusic() {
+            const btn = document.getElementById('btn-music-toggle');
+            const sel = document.getElementById('music-select');
+
+            if (sel.value === 'none') return alert("Select a track first!");
+
+            if (isMusicPlaying) {
+                bgAudio.pause();
+                isMusicPlaying = false;
+                btn.innerText = "▶ Play Music";
+                btn.style.background = "#9b59b6"; // Purple
+            } else {
+                bgAudio.play().then(() => {
+                    isMusicPlaying = true;
+                    btn.innerText = "⏸ Pause Music";
+                    btn.style.background = "#8e44ad"; // Darker Purple
+                }).catch(e => console.log("Interaction needed to play audio"));
+            }
+        }
+
+        // 3. Change Track
+        function changeTrack(trackName) {
+            localStorage.setItem('mandarinBgTrack', trackName);
+
+            if (trackName === 'none') {
+                bgAudio.pause();
+                isMusicPlaying = false;
+                document.getElementById('btn-music-toggle').innerText = "▶ Play Music";
+                return;
+            }
+
+            // Switch source and keep playing if already active
+            const wasPlaying = isMusicPlaying;
+            bgAudio.src = `audio/${trackName}.mp3`;
+
+            if (wasPlaying) {
+                bgAudio.play();
+            }
+        }
+
+        // 4. Volume Control
+        function setVolume(val) {
+            bgAudio.volume = val;
+            localStorage.setItem('mandarinBgVol', val);
+        }
+
+        // Run Init
+        initMusic();
+
+        // --- AUTO-START ON FIRST CLICK ---
+        function enableAudioOnFirstClick() {
+            const savedTrack = localStorage.getItem('mandarinBgTrack');
+
+            // Only try to play if they haven't explicitly turned it off ('none')
+            if (savedTrack && savedTrack !== 'none' && !isMusicPlaying) {
+                bgAudio.play().then(() => {
+                    isMusicPlaying = true;
+
+                    // Update the Settings button if it's visible
+                    const btn = document.getElementById('btn-music-toggle');
+                    if (btn) {
+                        btn.innerText = "⏸ Pause Music";
+                        btn.style.background = "#8e44ad";
+                    }
+
+                    // STOP listening after success (so we don't keep trying)
+                    document.removeEventListener('click', enableAudioOnFirstClick);
+                    document.removeEventListener('keydown', enableAudioOnFirstClick);
+                }).catch(e => {
+                    // Ignore errors (usually means the click wasn't "trusted" enough yet)
+                });
+            }
+        }
+
+        // Listen for any click or keypress anywhere on the page
+        document.addEventListener('click', enableAudioOnFirstClick);
+        document.addEventListener('keydown', enableAudioOnFirstClick);
+
+
+        // --- START ---
+        changeTheme(localStorage.getItem('mandarinAppTheme') || 'light');
+        updateSelectors();
+        initStudy();
+        initBg();
+        initDashboard();
+        switchView('dashboard');
+    </script>
+
+    <!-- Put this right above the </body> tag -->
+
+    <!-- Custom Radical Modal -->
+    <div id="radical-modal"
+        style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 2000; display: none; align-items: center; justify-content: center;">
+        <div
+            style="background: var(--card-bg); color: var(--text); padding: 25px; border-radius: 15px; max-width: 400px; width: 85%; border-left: 10px solid var(--accent); box-shadow: 0 10px 30px rgba(0,0,0,0.5); position: relative;">
+            <button onclick="closeRadicalModal()"
+                style="position: absolute; top: 10px; right: 15px; background: none; border: none; font-size: 28px; color: var(--subtext); cursor: pointer;">&times;</button>
+            <h3 style="margin-top: 0; color: var(--primary); font-size: 22px;">🧩 Radical Breakdown</h3>
+            <hr style="border: 0; border-top: 1px solid var(--border); margin-bottom: 20px;">
+            <div id="radical-content" style="line-height: 1.8; font-size: 17px;"></div>
+            <button class="btn btn-blue" style="margin-top: 25px; width: 100%;" onclick="closeRadicalModal()">Continue
+                Studying</button>
+        </div>
+    </div>
+
+    <!-- MANUAL ADD MODAL -->
+    <div id="manual-add-modal"
+        style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 2000; display: none; align-items: center; justify-content: center;">
+        <div
+            style="background: var(--card-bg); color: var(--text); padding: 25px; border-radius: 12px; max-width: 400px; width: 90%; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+            <h3 style="margin-top:0; color:var(--primary)">📝 Add New Word</h3>
+
+            <label style="font-size:12px; color:var(--subtext)">Character (Hanzi):</label>
+            <input type="text" id="manual-char" placeholder="e.g. 咖啡" style="margin-bottom:10px;">
+
+            <label style="font-size:12px; color:var(--subtext)">Pinyin:</label>
+            <input type="text" id="manual-pinyin" placeholder="e.g. kā fēi" style="margin-bottom:10px;">
+
+            <label style="font-size:12px; color:var(--subtext)">Meaning:</label>
+            <input type="text" id="manual-mean" placeholder="e.g. Coffee" style="margin-bottom:10px;">
+
+            <label style="font-size:12px; color:var(--subtext)">Save to Node:</label>
+            <select id="manual-group-select" style="margin-bottom:20px;"></select>
+
+            <div style="display:flex; gap:10px; justify-content: flex-end;">
+                <button class="btn btn-red"
+                    onclick="document.getElementById('manual-add-modal').style.display='none'">Cancel</button>
+                <button class="btn btn-green" onclick="saveManualWord()">Save Word</button>
+            </div>
+        </div>
+    </div>
+
+</body>
+
+</html>

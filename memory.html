@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Bamboo Match 🀄</title>
+    <style>
+        body { background: #1a1a1b; color: white; font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
+        
+        h1 { color: #f39c12; margin-bottom: 5px; text-shadow: 0 2px 10px rgba(243, 156, 18, 0.3); }
+        .stats { margin-bottom: 20px; color: #888; font-size: 14px; }
+        
+        .grid-container { 
+            display: grid; 
+            grid-template-columns: repeat(4, 1fr); 
+            gap: 15px; 
+            perspective: 1000px;
+            max-width: 600px;
+            width: 95%;
+        }
+
+        .card {
+            background-color: transparent;
+            height: 120px;
+            cursor: pointer;
+            perspective: 1000px;
+        }
+
+        .card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        .card.flipped .card-inner { transform: rotateY(180deg); }
+        .card.matched .card-inner { opacity: 0; transition: opacity 0.5s 0.3s; cursor: default; }
+
+        .card-front, .card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            border: 2px solid #333;
+        }
+
+        /* The back of the card (Bamboo Pattern) */
+        .card-front {
+            background: #2c3e50;
+            background-image: repeating-linear-gradient(45deg, #2c3e50 25%, transparent 25%, transparent 75%, #2c3e50 75%, #2c3e50), repeating-linear-gradient(45deg, #2c3e50 25%, #1a1a1b 25%, #1a1a1b 75%, #2c3e50 75%, #2c3e50);
+            background-position: 0 0, 10px 10px;
+            background-size: 20px 20px;
+            color: #f39c12;
+            font-size: 30px;
+        }
+
+        /* The face of the card (Text) */
+        .card-back {
+            background: #ecf0f1;
+            color: #2c3e50;
+            transform: rotateY(180deg);
+            padding: 5px;
+            box-sizing: border-box;
+            font-weight: bold;
+        }
+
+        .chinese-text { font-family: "KaiTi", "楷体", serif; font-size: 32px; color: #c0392b; }
+        .eng-text { font-size: 16px; word-wrap: break-word; }
+
+        button { background: #f39c12; color: #fff; border: none; padding: 10px 25px; border-radius: 5px; font-weight: bold; cursor: pointer; margin-top: 20px; font-size: 16px; }
+        button:hover { background: #d68910; }
+        
+        #win-msg { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+<h1>Bamboo Match 🀄</h1>
+<div class="stats">Moves: <span id="move-count">0</span></div>
+
+<div class="grid-container" id="game-grid">
+    <!-- Cards generated here -->
+</div>
+
+<div id="win-msg" class="hidden">
+    <h1 style="font-size: 50px; color: #2ecc71;">Excellent!</h1>
+    <p style="font-size: 20px;">You cleared the board.</p>
+    <button onclick="initGame()">Play Again</button>
+</div>
+
+<!-- FLOATING HOME BUTTON -->
+<button onclick="window.location.href='index.html'" style="position:fixed; top:10px; left:10px; z-index:1000; background:rgba(0,0,0,0.5); color:white; border:none; padding:10px 15px; border-radius:20px; font-size:16px; cursor:pointer;">
+    🏠 Home
+</button>
+
+<script>
+    // 1. DATABASE LOADING (Same as Snake)
+    let db = [];
+    const defaultList = [
+        {id:1, char: "你好", meaning: "Hello"}, {id:2, char: "猫", meaning: "Cat"},
+        {id:3, char: "水", meaning: "Water"}, {id:4, char: "大", meaning: "Big"},
+        {id:5, char: "书", meaning: "Book"}, {id:6, char: "吃", meaning: "Eat"},
+        {id:7, char: "人", meaning: "Person"}, {id:8, char: "月", meaning: "Moon"}
+    ];
+
+    function loadDB() {
+        try {
+            const local = localStorage.getItem('mandarinFinalSuite_V12');
+            if (local) {
+                const parsed = JSON.parse(local);
+                if (parsed.words && parsed.words.length >= 8) { db = parsed.words; return; }
+            }
+        } catch(e) {}
+        db = defaultList;
+    }
+
+    // 2. GAME VARIABLES
+    let moves = 0;
+    let flippedCards = [];
+    let matchedPairs = 0;
+    let lockBoard = false;
+
+    // 3. INIT
+    function initGame() {
+        loadDB();
+        const grid = document.getElementById('game-grid');
+        grid.innerHTML = '';
+        document.getElementById('win-msg').classList.add('hidden');
+        moves = 0;
+        matchedPairs = 0;
+        document.getElementById('move-count').innerText = moves;
+        flippedCards = [];
+
+        // Pick 8 random words
+        let pool = [...db].sort(() => 0.5 - Math.random()).slice(0, 8);
+        
+        // Create pairs (Character Card + Meaning Card)
+        let cards = [];
+        pool.forEach(item => {
+            cards.push({ id: item.id, type: 'char', content: item.char });
+            cards.push({ id: item.id, type: 'mean', content: item.meaning });
+        });
+
+        // Shuffle cards
+        cards.sort(() => 0.5 - Math.random());
+
+        // Render
+        cards.forEach(card => {
+            const el = document.createElement('div');
+            el.className = 'card';
+            el.dataset.id = card.id;
+            
+            // Front is the pattern, Back is the content
+            const contentHtml = card.type === 'char' 
+                ? `<span class="chinese-text">${card.content}</span>`
+                : `<span class="eng-text">${card.content}</span>`;
+
+            el.innerHTML = `
+                <div class="card-inner">
+                    <div class="card-front">?</div>
+                    <div class="card-back">${contentHtml}</div>
+                </div>
+            `;
+            
+            el.addEventListener('click', () => flipCard(el));
+            grid.appendChild(el);
+        });
+    }
+
+    // 4. LOGIC
+    function flipCard(card) {
+        if (lockBoard || card.classList.contains('flipped') || card.classList.contains('matched')) return;
+
+        card.classList.add('flipped');
+        flippedCards.push(card);
+
+        if (flippedCards.length === 2) {
+            moves++;
+            document.getElementById('move-count').innerText = moves;
+            checkForMatch();
+        }
+    }
+
+    function checkForMatch() {
+        lockBoard = true;
+        const [c1, c2] = flippedCards;
+        const isMatch = c1.dataset.id === c2.dataset.id;
+
+        if (isMatch) {
+            setTimeout(() => {
+                c1.classList.add('matched');
+                c2.classList.add('matched');
+                matchedPairs++;
+                resetBoard();
+                if (matchedPairs === 8) endGame();
+            }, 600);
+        } else {
+            setTimeout(() => {
+                c1.classList.remove('flipped');
+                c2.classList.remove('flipped');
+                resetBoard();
+            }, 1000);
+        }
+    }
+
+    function resetBoard() {
+        flippedCards = [];
+        lockBoard = false;
+    }
+
+    function endGame() {
+        document.getElementById('win-msg').classList.remove('hidden');
+    }
+
+    // Start
+    initGame();
+</script>
+</body>
+</html>
